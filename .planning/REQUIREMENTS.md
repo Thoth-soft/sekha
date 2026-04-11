@@ -126,8 +126,70 @@
 
 ## Traceability
 
-Filled by the roadmapper during phase generation.
+**Coverage:** 63 of 63 v1 requirements mapped to phases (100%). No orphans.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| (pending) | (pending) | (pending) |
+| SETUP-01 | Phase 0 | Pending |
+| SETUP-02 | Phase 0 | Pending |
+| SETUP-03 | Phase 0 | Pending |
+| SETUP-04 | Phase 0 | Pending |
+| SETUP-05 | Phase 0 | Pending |
+| STORE-01 | Phase 1 | Pending |
+| STORE-02 | Phase 1 | Pending |
+| STORE-03 | Phase 1 | Pending |
+| STORE-04 | Phase 1 | Pending |
+| STORE-05 | Phase 1 | Pending |
+| STORE-06 | Phase 1 | Pending |
+| STORE-07 | Phase 1 | Pending |
+| SEARCH-01 | Phase 2 | Pending |
+| SEARCH-02 | Phase 2 | Pending |
+| SEARCH-03 | Phase 2 | Pending |
+| SEARCH-04 | Phase 2 | Pending |
+| SEARCH-05 | Phase 2 | Pending |
+| SEARCH-06 | Phase 2 | Pending |
+| RULES-01 | Phase 3 | Pending |
+| RULES-02 | Phase 3 | Pending |
+| RULES-03 | Phase 3 | Pending |
+| RULES-04 | Phase 3 | Pending |
+| RULES-05 | Phase 3 | Pending |
+| RULES-06 | Phase 3 | Pending |
+| RULES-07 | Phase 3 | Pending |
+| RULES-08 | Phase 3 | Pending |
+| HOOK-01 | Phase 4 | Pending |
+| HOOK-02 | Phase 4 | Pending |
+| HOOK-03 | Phase 4 | Pending |
+| HOOK-04 | Phase 4 | Pending |
+| HOOK-05 | Phase 4 | Pending |
+| HOOK-06 | Phase 4 | Pending |
+| HOOK-07 | Phase 4 | Pending |
+| HOOK-08 | Phase 4 | Pending |
+| HOOK-09 | Phase 4 | Pending |
+| HOOK-10 | Phase 4 | Pending |
+| MCP-01 | Phase 5 | Pending |
+| MCP-02 | Phase 5 | Pending |
+| MCP-03 | Phase 5 | Pending |
+| MCP-04 | Phase 5 | Pending |
+| MCP-05 | Phase 5 | Pending |
+| MCP-06 | Phase 5 | Pending |
+| MCP-07 | Phase 5 | Pending |
+| MCP-08 | Phase 5 | Pending |
+| MCP-09 | Phase 5 | Pending |
+| MCP-10 | Phase 5 | Pending |
+| MCP-11 | Phase 5 | Pending |
+| MCP-12 | Phase 5 | Pending |
+| CLI-01 | Phase 6 | Pending |
+| CLI-02 | Phase 6 | Pending |
+| CLI-03 | Phase 6 | Pending |
+| CLI-04 | Phase 6 | Pending |
+| CLI-05 | Phase 6 | Pending |
+| CLI-06 | Phase 6 | Pending |
+| CLI-07 | Phase 6 | Pending |
+| CLI-08 | Phase 6 | Pending |
+| DOCS-01 | Phase 7 | Pending |
+| DOCS-02 | Phase 7 | Pending |
+| DOCS-03 | Phase 7 | Pending |
+| DOCS-04 | Phase 7 | Pending |
+| DOCS-05 | Phase 7 | Pending |
+| DOCS-06 | Phase 7 | Pending |
+| DOCS-07 | Phase 7 | Pending |
