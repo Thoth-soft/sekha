@@ -142,6 +142,116 @@ def extract_snippet(body: str, query: str, *, max_line_len: int = 120) -> str:
     return ""
 
 
+def count_literal(text: str, query: str) -> int:
+    """Count case-insensitive substring occurrences of `query` in `text`.
+
+    O(n) via str.count after lowercasing both sides. ReDoS-immune by
+    construction. Returns 0 on empty query. Used by scan_text and
+    scan_file_with_timeout as the hot-path counter for literal queries.
+    """
+    if not query:
+        return 0
+    return text.lower().count(query.lower())
+
+
+def count_regex(
+    text: str,
+    pattern: "re.Pattern[str]",
+    *,
+    query: str,
+    path: Path | None = None,
+    timeout: float = 0.1,
+) -> tuple[int, bool]:
+    """Count matches of pre-compiled `pattern` in `text` under a thread watchdog.
+
+    Returns (match_count, timed_out). Compiles nothing — the caller owns the
+    compiled pattern so a 10k-file search compiles once, not 10k times. The
+    original `query` string is accepted only for log context on timeout.
+
+    Watchdog runs findall in a daemon thread and waits `timeout` seconds via
+    thread.join. CPython's `re` holds the GIL for the whole findall call so
+    this can't preempt a true catastrophic backtrack — catastrophic shapes
+    MUST be rejected up-front by the caller via _is_catastrophic_pattern.
+    The watchdog is a secondary defense for anything the static check misses.
+    """
+    result: dict = {"count": 0, "done": False}
+
+    def _worker() -> None:
+        try:
+            result["count"] = len(pattern.findall(text))
+        except re.error as e:
+            _log.warning("search: regex error for %r: %s", query, e)
+        finally:
+            result["done"] = True
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    t.join(timeout)
+    if not result["done"]:
+        _log.warning(
+            "search: regex %r timed out on %s after %.3fs (possible ReDoS)",
+            query,
+            path,
+            timeout,
+        )
+        return (0, True)
+    return (result["count"], False)
+
+
+def scan_text(
+    text: str,
+    query: str,
+    *,
+    is_literal: bool,
+    compiled_pattern: "re.Pattern[str] | None" = None,
+    timeout: float = 0.1,
+    path: Path | None = None,
+    use_watchdog: bool = True,
+) -> tuple[int, bool]:
+    """Count occurrences of `query` in already-read `text`.
+
+    Hot path for cyrus.search on a large corpus: the caller has read the
+    file once (for frontmatter parsing) and compiled the regex once (for
+    the whole query) — scan_text avoids both redundancies.
+
+    Returns (match_count, timed_out). See count_literal / count_regex for
+    the underlying primitives. `path` is accepted solely for log context.
+
+    `use_watchdog=False` skips the per-call thread watchdog for the regex
+    path — spawning 10,000 watchdog threads on a 10k-file search is a
+    measurable bottleneck and the static _is_catastrophic_pattern check
+    already rejects every known dangerous shape up-front. Callers that
+    have *already* pre-rejected catastrophic patterns (see cyrus.search)
+    can safely disable the watchdog to claim that throughput.
+    """
+    if is_literal:
+        return (count_literal(text, query), False)
+    if compiled_pattern is None:
+        # Caller forgot to compile — compile defensively so we never crash,
+        # but this slow path defeats the purpose; log once and continue.
+        if _is_catastrophic_pattern(query):
+            _log.warning(
+                "search: regex %r on %s rejected as catastrophic (ReDoS guard)",
+                query,
+                path,
+            )
+            return (0, True)
+        try:
+            compiled_pattern = re.compile(query, re.IGNORECASE)
+        except re.error as e:
+            _log.warning("search: invalid regex %r: %s", query, e)
+            return (0, False)
+    if not use_watchdog:
+        try:
+            return (len(compiled_pattern.findall(text)), False)
+        except re.error as e:
+            _log.warning("search: regex error for %r: %s", query, e)
+            return (0, False)
+    return count_regex(
+        text, compiled_pattern, query=query, path=path, timeout=timeout,
+    )
+
+
 def scan_file_with_timeout(
     path: Path,
     query: str,
@@ -171,47 +281,14 @@ def scan_file_with_timeout(
         _log.warning("search: cannot read %s: %s", path, e)
         return (0, False)
 
-    if is_literal:
-        if not query:
-            return (0, False)
-        return (text.lower().count(query.lower()), False)
-
-    # Regex path — reject catastrophic shapes UP FRONT. CPython's `re` is a C
-    # extension that holds the GIL throughout findall, so a thread watchdog
-    # cannot preempt a runaway backtrack. The pre-check keeps us out of that
-    # trap entirely for the known-dangerous shapes.
-    if _is_catastrophic_pattern(query):
-        _log.warning(
-            "search: regex %r on %s rejected as catastrophic (ReDoS guard)",
-            query,
-            path,
-        )
-        return (0, True)
-
-    # Non-catastrophic regex — still run under the thread watchdog as a
-    # secondary defense for surprises the static check misses. If the
-    # watchdog fires the worker will keep running (daemon) but the search
-    # moves on.
-    result: dict = {"count": 0, "done": False}
-
-    def _worker() -> None:
-        try:
-            pattern = re.compile(query, re.IGNORECASE)
-            result["count"] = len(pattern.findall(text))
-        except re.error as e:
-            _log.warning("search: invalid regex %r: %s", query, e)
-        finally:
-            result["done"] = True
-
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
-    t.join(timeout)
-    if not result["done"]:
-        _log.warning(
-            "search: regex %r timed out on %s after %.3fs (possible ReDoS)",
-            query,
-            path,
-            timeout,
-        )
-        return (0, True)
-    return (result["count"], False)
+    # Delegate to the compiled-pattern hot path. scan_text compiles once when
+    # no pattern is supplied; scan_file_with_timeout is not on the 10k-file
+    # critical path, so the extra compile per call is fine here.
+    return scan_text(
+        text,
+        query,
+        is_literal=is_literal,
+        compiled_pattern=None,
+        timeout=timeout,
+        path=path,
+    )
