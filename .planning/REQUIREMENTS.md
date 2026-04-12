@@ -18,13 +18,13 @@
 
 ### Storage (STORE)
 
-- [ ] **STORE-01**: `~/.cyrus/` directory layout uses 5 fixed categories: `sessions/`, `decisions/`, `preferences/`, `projects/`, `rules/`. Created on first run.
-- [ ] **STORE-02**: Memory files use filename format `YYYY-MM-DD_<id>_<slug>.md` for chronological sort and grep-friendliness.
-- [ ] **STORE-03**: Memory files have YAML-subset frontmatter (hand-parsed, no PyYAML) with fields: `id`, `category`, `created`, `updated`, `tags`, `source`.
-- [ ] **STORE-04**: Write operations are atomic (`os.replace` after `fsync` to a temp file in the same directory). No partial writes on crash.
-- [ ] **STORE-05**: Cross-process file locking uses `fcntl` on POSIX and `msvcrt` on Windows. Concurrent writes serialize without corruption.
+- [x] **STORE-01**: `~/.cyrus/` directory layout uses 5 fixed categories: `sessions/`, `decisions/`, `preferences/`, `projects/`, `rules/`. Created on first run.
+- [x] **STORE-02**: Memory files use filename format `YYYY-MM-DD_<id>_<slug>.md` for chronological sort and grep-friendliness.
+- [x] **STORE-03**: Memory files have YAML-subset frontmatter (hand-parsed, no PyYAML) with fields: `id`, `category`, `created`, `updated`, `tags`, `source`.
+- [x] **STORE-04**: Write operations are atomic (`os.replace` after `fsync` to a temp file in the same directory). No partial writes on crash.
+- [x] **STORE-05**: Cross-process file locking uses `fcntl` on POSIX and `msvcrt` on Windows. Concurrent writes serialize without corruption.
 - [x] **STORE-06**: `CYRUS_HOME` environment variable overrides the default `~/.cyrus/` location for testing and portable setups. *(Phase 1 / 01-01 — cyrus.paths.cyrus_home)*
-- [ ] **STORE-07**: Stress test: 100 parallel writes to the same file produce zero corruption. Part of unit test suite.
+- [x] **STORE-07**: Stress test: 100 parallel writes to the same file produce zero corruption. Part of unit test suite.
 
 ### Search (SEARCH)
 
@@ -135,13 +135,13 @@
 | SETUP-03 | Phase 0 | Pending |
 | SETUP-04 | Phase 0 | Pending |
 | SETUP-05 | Phase 0 | Pending |
-| STORE-01 | Phase 1 | Pending |
-| STORE-02 | Phase 1 | Pending |
-| STORE-03 | Phase 1 | Pending |
-| STORE-04 | Phase 1 | Pending |
-| STORE-05 | Phase 1 | Pending |
+| STORE-01 | Phase 1 | Complete |
+| STORE-02 | Phase 1 | Complete |
+| STORE-03 | Phase 1 | Complete |
+| STORE-04 | Phase 1 | Complete |
+| STORE-05 | Phase 1 | Complete |
 | STORE-06 | Phase 1 / 01-01 | Complete (2026-04-12) |
-| STORE-07 | Phase 1 | Pending |
+| STORE-07 | Phase 1 | Complete |
 | SEARCH-01 | Phase 2 | Pending |
 | SEARCH-02 | Phase 2 | Pending |
 | SEARCH-03 | Phase 2 | Pending |

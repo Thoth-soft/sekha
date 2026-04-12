@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1.0
 milestone_name: "**Goal**: Ship v0.1.0. Replace the README skeleton from Phase 0 with a real one, document the threat model honestly"
-status: executing
-stopped_at: "Phase 1 Plan 1 complete: cyrus.paths + cyrus.logutil shipped with 17 new tests; ready for Plan 01-02 (cyrus.storage)."
-last_updated: "2026-04-12T22:31:56Z"
-last_activity: 2026-04-12 -- Phase 1 Plan 01-01 executed
+status: verifying
+stopped_at: "Phase 1 Plan 02 complete: cyrus.storage shipped with 43 new tests including STORE-07 100-parallel-write stress; Phase 1 ready for verification"
+last_updated: "2026-04-12T22:42:28.681Z"
+last_activity: 2026-04-12
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
   percent: 12
 ---
 
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 
 Phase: 1 (Storage Foundation) — EXECUTING
 Plan: 2 of 2 (01-02: cyrus.storage atomic write + frontmatter + filelock)
-Status: Ready to execute
-Last activity: 2026-04-12 -- Plan 01-01 complete (paths + logutil)
+Status: Phase complete — ready for verification
+Last activity: 2026-04-12
 
 Progress: [█░░░░░░░░░] 12%
 
@@ -52,6 +52,7 @@ Progress: [█░░░░░░░░░] 12%
 - Trend: on-plan, no deviations
 
 *Updated after each plan completion*
+| Phase 01-storage-foundation P02 | 9min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,10 @@ Recent decisions affecting current work:
 - [Phase 1 / 01-01]: `cyrus_home()` reads `CYRUS_HOME` on every call (no caching) so per-test overrides work without module reload.
 - [Phase 1 / 01-01]: `cyrus.logutil` does not import from `cyrus.paths` — keeps the two foundation modules orthogonal so future MCP boot-lint can touch logutil without HOME/FS.
 - [Phase 1 / 01-01]: Invalid `CYRUS_LOG_LEVEL` falls back to INFO silently — loud config errors would break tools invoked with odd envs.
+- [Phase 01-storage-foundation]: blake2b(digest_size=4) for filename IDs: stdlib, deterministic, 8 hex chars
+- [Phase 01-storage-foundation]: Platform filelock primitive chosen at IMPORT time via sys.platform gate
+- [Phase 01-storage-foundation]: Lock files intentionally never deleted on release — race-safe
+- [Phase 01-storage-foundation]: ISO timestamps preserved as strings through parse/dump for lossless round-trip
 
 ### Pending Todos
 
@@ -85,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12
-Stopped at: Phase 1 Plan 1 complete: cyrus.paths + cyrus.logutil shipped with 17 new tests; ready for Plan 01-02 (cyrus.storage).
+Last session: 2026-04-12T22:42:28.677Z
+Stopped at: Phase 1 Plan 02 complete: cyrus.storage shipped with 43 new tests including STORE-07 100-parallel-write stress; Phase 1 ready for verification
 Resume file: None
