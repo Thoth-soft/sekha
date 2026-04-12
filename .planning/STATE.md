@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v0.1.0
+milestone_name: "**Goal**: Ship v0.1.0. Replace the README skeleton from Phase 0 with a real one, document the threat model honestly"
+status: executing
+stopped_at: "Roadmap created with 8 phases and 100% requirement coverage; ready for `/gsd:plan-phase 0`."
+last_updated: "2026-04-12T21:50:27.104Z"
+last_activity: 2026-04-12 -- Phase 0 execution started
+progress:
+  total_phases: 8
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 0
+  percent: 0
+---
+
 # Project State
 
 ## Project Reference
@@ -9,16 +25,17 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 
 ## Current Position
 
-Phase: 0 of 7 (Setup & Naming Gate)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-04-11 — Roadmap created (8 phases, 63 v1 requirements mapped 100%)
+Phase: 0 (Setup & Naming Gate) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 0
+Last activity: 2026-04-12 -- Phase 0 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: 0.0 hours
@@ -30,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: —
 - Trend: —
 

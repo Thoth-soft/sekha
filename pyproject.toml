@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cyrus"
+version = "0.0.0"
+description = "Zero-dependency AI memory system with hook-level rules enforcement for Claude Code"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Mo Hendawy", email = "moh.abdelmaksoad@gmail.com" },
+]
+keywords = ["ai", "memory", "claude", "mcp", "rules"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/getcyrus/cyrus"
+Repository = "https://github.com/getcyrus/cyrus"
+Issues = "https://github.com/getcyrus/cyrus/issues"
+
+[project.scripts]
+cyrus = "cyrus.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cyrus"]
