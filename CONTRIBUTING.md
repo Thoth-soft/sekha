@@ -4,7 +4,7 @@
 
 1. Clone the repository:
    ```
-   git clone https://github.com/getcyrus/cyrus.git
+   git clone https://github.com/Thoth-soft/cyrus.git
    cd cyrus
    ```
 

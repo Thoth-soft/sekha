@@ -26,9 +26,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/getcyrus/cyrus"
-Repository = "https://github.com/getcyrus/cyrus"
-Issues = "https://github.com/getcyrus/cyrus/issues"
+Homepage = "https://github.com/Thoth-soft/cyrus"
+Repository = "https://github.com/Thoth-soft/cyrus"
+Issues = "https://github.com/Thoth-soft/cyrus/issues"
 
 [project.scripts]
 cyrus = "cyrus.cli:main"
