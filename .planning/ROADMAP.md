@@ -33,7 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The GitHub repo at `github.com/Mo-Hendawy/<name>` has MIT LICENSE, README skeleton, and CONTRIBUTING.md committed to main.
   4. CI matrix is configured for Windows + macOS + Linux × Python 3.11, 3.12, 3.13 and runs successfully on a no-op placeholder test.
 **Note**: This is a **decision gate**, not a coding phase. Success means "decisions logged + names reserved + scaffolding exists." There is no application code to test here.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 00-01-PLAN.md — Repository scaffolding: pyproject.toml, src/ layout, LICENSE, README, CONTRIBUTING, CI matrix, placeholder tests
+- [ ] 00-02-PLAN.md — PyPI name reservation (v0.0.0 publish) and PROJECT.md decisions finalization
 **UI hint**: no
 
 ### Phase 1: Storage Foundation
@@ -130,7 +133,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Setup & Naming Gate | 0/TBD | Not started | - |
+| 0. Setup & Naming Gate | 0/2 | Planning complete | - |
 | 1. Storage Foundation | 0/TBD | Not started | - |
 | 2. Search Engine | 0/TBD | Not started | - |
 | 3. Rules Engine | 0/TBD | Not started | - |
