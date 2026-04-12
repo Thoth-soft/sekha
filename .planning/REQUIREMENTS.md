@@ -23,7 +23,7 @@
 - [ ] **STORE-03**: Memory files have YAML-subset frontmatter (hand-parsed, no PyYAML) with fields: `id`, `category`, `created`, `updated`, `tags`, `source`.
 - [ ] **STORE-04**: Write operations are atomic (`os.replace` after `fsync` to a temp file in the same directory). No partial writes on crash.
 - [ ] **STORE-05**: Cross-process file locking uses `fcntl` on POSIX and `msvcrt` on Windows. Concurrent writes serialize without corruption.
-- [ ] **STORE-06**: `CYRUS_HOME` environment variable overrides the default `~/.cyrus/` location for testing and portable setups.
+- [x] **STORE-06**: `CYRUS_HOME` environment variable overrides the default `~/.cyrus/` location for testing and portable setups. *(Phase 1 / 01-01 — cyrus.paths.cyrus_home)*
 - [ ] **STORE-07**: Stress test: 100 parallel writes to the same file produce zero corruption. Part of unit test suite.
 
 ### Search (SEARCH)
@@ -140,7 +140,7 @@
 | STORE-03 | Phase 1 | Pending |
 | STORE-04 | Phase 1 | Pending |
 | STORE-05 | Phase 1 | Pending |
-| STORE-06 | Phase 1 | Pending |
+| STORE-06 | Phase 1 / 01-01 | Complete (2026-04-12) |
 | STORE-07 | Phase 1 | Pending |
 | SEARCH-01 | Phase 2 | Pending |
 | SEARCH-02 | Phase 2 | Pending |

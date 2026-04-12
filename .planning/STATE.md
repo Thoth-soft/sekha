@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1.0
 milestone_name: "**Goal**: Ship v0.1.0. Replace the README skeleton from Phase 0 with a real one, document the threat model honestly"
 status: executing
-stopped_at: "Roadmap created with 8 phases and 100% requirement coverage; ready for `/gsd:plan-phase 0`."
-last_updated: "2026-04-12T21:50:27.104Z"
-last_activity: 2026-04-12 -- Phase 0 execution started
+stopped_at: "Phase 1 Plan 1 complete: cyrus.paths + cyrus.logutil shipped with 17 new tests; ready for Plan 01-02 (cyrus.storage)."
+last_updated: "2026-04-12T22:31:56Z"
+last_activity: 2026-04-12 -- Phase 1 Plan 01-01 executed
 progress:
   total_phases: 8
-  completed_phases: 0
-  total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 12
 ---
 
 # Project State
@@ -21,35 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** The AI actually follows rules you give it — enforcement at the system level via PreToolUse hooks, not "trust the model to remember."
-**Current focus:** Phase 0 — Setup & Naming Gate
+**Current focus:** Phase 1 — Storage Foundation
 
 ## Current Position
 
-Phase: 0 (Setup & Naming Gate) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 0
-Last activity: 2026-04-12 -- Phase 0 execution started
+Phase: 1 (Storage Foundation) — EXECUTING
+Plan: 2 of 2 (01-02: cyrus.storage atomic write + frontmatter + filelock)
+Status: Ready to execute
+Last activity: 2026-04-12 -- Plan 01-01 complete (paths + logutil)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 12%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0.0 hours
+- Total plans completed: 3 (Phase 0 x2, Phase 1 x1)
+- Average duration: ~3 min (Phase 1 01-01)
+- Total execution time: ~0.05 hours
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+| Phase | Plans | Total     | Avg/Plan |
+|-------|-------|-----------|----------|
+| 1     | 1     | ~3 min    | ~3 min   |
 
 **Recent Trend:**
 
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01 (3 min) — 2 TDD pairs + 1 verify, 17 new tests green
+- Trend: on-plan, no deviations
 
 *Updated after each plan completion*
 
@@ -63,6 +63,9 @@ Recent decisions affecting current work:
 - [Phase 0]: Two blockers must be resolved before any code is written: (a) pick a real PyPI name from the available shortlist (`cyrus-cc`, `cyrus-hook`, `cyrus-rules`, or rename); (b) bump Python minimum from 3.9 to 3.11 (3.9 EOL Oct 2025).
 - [Roadmap]: Hook ships in Phase 4, before the MCP server in Phase 5. The hook is the differentiator and must be dogfooded early — failing here saves the whole project.
 - [Roadmap]: Phase 0 is a non-code decision gate. Success criteria are "decisions logged + names reserved + scaffolding exists," not "tests pass."
+- [Phase 1 / 01-01]: `cyrus_home()` reads `CYRUS_HOME` on every call (no caching) so per-test overrides work without module reload.
+- [Phase 1 / 01-01]: `cyrus.logutil` does not import from `cyrus.paths` — keeps the two foundation modules orthogonal so future MCP boot-lint can touch logutil without HOME/FS.
+- [Phase 1 / 01-01]: Invalid `CYRUS_LOG_LEVEL` falls back to INFO silently — loud config errors would break tools invoked with odd envs.
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11
-Stopped at: Roadmap created with 8 phases and 100% requirement coverage; ready for `/gsd:plan-phase 0`.
+Last session: 2026-04-12
+Stopped at: Phase 1 Plan 1 complete: cyrus.paths + cyrus.logutil shipped with 17 new tests; ready for Plan 01-02 (cyrus.storage).
 Resume file: None

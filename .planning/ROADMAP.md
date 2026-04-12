@@ -12,8 +12,8 @@ Cyrus is a zero-dependency, local-first AI memory system whose differentiator is
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 0: Setup & Naming Gate** - Resolve PyPI name conflict, lock Python 3.11 minimum, scaffold repo and CI (no application code)
-- [ ] **Phase 1: Storage Foundation** - `cyrus.storage`, `cyrus.paths`, `cyrus.logutil` — atomic writes, frontmatter, filelock, `~/.cyrus/` taxonomy
+- [x] **Phase 0: Setup & Naming Gate** - Resolve PyPI name conflict, lock Python 3.11 minimum, scaffold repo and CI (no application code)
+- [ ] **Phase 1: Storage Foundation** - `cyrus.storage`, `cyrus.paths`, `cyrus.logutil` — atomic writes, frontmatter, filelock, `~/.cyrus/` taxonomy (1/2 plans done)
 - [ ] **Phase 2: Search Engine** - `cyrus.search` with TF × recency scoring, ReDoS guard, and 10k-file p95 < 500ms benchmark
 - [ ] **Phase 3: Rules Engine** - `cyrus.rules` pure-logic module: load, parse, tool-scoped match, precedence, compile cache, dry-run
 - [ ] **Phase 4: PreToolUse Hook (THE DIFFERENTIATOR)** - `cyrus.hook` with fail-open policy, lazy imports, p50 < 50ms / p95 < 150ms CI gate, end-to-end Claude Code block test, dogfooding exit
@@ -133,8 +133,8 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Setup & Naming Gate | 0/2 | Planning complete | - |
-| 1. Storage Foundation | 0/TBD | Not started | - |
+| 0. Setup & Naming Gate | 2/2 | Complete | 2026-04-12 |
+| 1. Storage Foundation | 1/2 | Executing | - |
 | 2. Search Engine | 0/TBD | Not started | - |
 | 3. Rules Engine | 0/TBD | Not started | - |
 | 4. PreToolUse Hook | 0/TBD | Not started | - |
