@@ -209,3 +209,178 @@ def make_memory_path(
     )
     id_hex = hashlib.blake2b(seed_bytes, digest_size=4).hexdigest()
     return category_dir(category) / f"{date_part}_{id_hex}_{slug}.md"
+
+
+# --------------------------------------------------------------------------
+# Frontmatter — hand-rolled YAML subset
+# --------------------------------------------------------------------------
+_FM_DELIM = "---"
+
+
+def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
+    """Parse YAML-subset frontmatter. Returns (metadata, body).
+
+    Supported value types: str, int, bool, ISO-8601 date/datetime (kept as str),
+    flat flow-list ([a, b, c]). No nesting, no anchors, no block scalars.
+    Tolerates CRLF line endings. Returns ({}, text) when no leading '---'.
+    Raises ValueError on unclosed blocks or malformed key:value lines.
+    """
+    # Normalize CRLF to LF for parsing only — body is recomputed from norm
+    # so the returned body is LF-terminated too. Callers that need CRLF
+    # must re-encode themselves.
+    norm = text.replace("\r\n", "\n").replace("\r", "\n")
+    if not norm.startswith(_FM_DELIM + "\n") and norm.strip() != _FM_DELIM:
+        return ({}, text)
+    lines = norm.split("\n")
+    if not lines or lines[0] != _FM_DELIM:
+        return ({}, text)
+    try:
+        end_idx = next(
+            i for i in range(1, len(lines)) if lines[i] == _FM_DELIM
+        )
+    except StopIteration:
+        raise ValueError("Unclosed frontmatter: missing closing '---'")
+
+    meta: dict[str, Any] = {}
+    for raw in lines[1:end_idx]:
+        line = raw.rstrip()
+        if not line or line.lstrip().startswith("#"):
+            continue
+        if ":" not in line:
+            raise ValueError(f"Malformed frontmatter line: {raw!r}")
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            raise ValueError(f"Empty key in frontmatter line: {raw!r}")
+        meta[key] = _parse_value(value)
+
+    # Body = everything after the closing delimiter line. We join with \n;
+    # if the original text had a trailing \n after the closing delimiter,
+    # the split produced a final "" element which rejoins cleanly.
+    body_lines = lines[end_idx + 1:]
+    body = "\n".join(body_lines)
+    # Common case: "---\nkey: v\n---\nbody" → body_lines = ["body"]. Fine.
+    # Edge case: "---\nkey: v\n---\n" → body_lines = [""] → body = "".
+    return (meta, body)
+
+
+def _parse_value(v: str) -> Any:
+    if not v:
+        return ""
+    # Quoted string — strip outer quotes, no escape handling beyond verbatim
+    if (v.startswith('"') and v.endswith('"')) or (
+        v.startswith("'") and v.endswith("'")
+    ):
+        return v[1:-1]
+    # Flow list: [a, b, c] — supports empty list [] and nested-quoted items
+    if v.startswith("[") and v.endswith("]"):
+        inner = v[1:-1].strip()
+        if not inner:
+            return []
+        return [_parse_value(item.strip()) for item in inner.split(",")]
+    if v == "true":
+        return True
+    if v == "false":
+        return False
+    if re.fullmatch(r"-?\d+", v):
+        return int(v)
+    # Otherwise keep as string — includes ISO timestamps, bare words, etc.
+    return v
+
+
+def dump_frontmatter(metadata: dict[str, Any], body: str) -> str:
+    """Serialize metadata + body to '---\\n<sorted kv>\\n---\\n<body>'.
+
+    Keys emitted alphabetically for deterministic diffs. Flat lists render
+    as flow style. Strings requiring quoting (contain ':' or start with a
+    structural char) are double-quoted. Nested dicts/lists raise ValueError.
+    """
+    lines = [_FM_DELIM]
+    for key in sorted(metadata.keys()):
+        lines.append(f"{key}: {_dump_value(metadata[key])}")
+    lines.append(_FM_DELIM)
+    return "\n".join(lines) + "\n" + body
+
+
+_QUOTE_TRIGGER_CHARS = ("[", "{", "-", "#", "&", "*", "!", "|", ">", "'", '"')
+
+
+def _dump_value(v: Any) -> str:
+    # bool MUST be checked before int — bool is a subclass of int in Python
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, int):
+        return str(v)
+    if isinstance(v, list):
+        for item in v:
+            if isinstance(item, (list, dict)):
+                raise ValueError(
+                    "Nested collections are not supported in frontmatter"
+                )
+        return "[" + ", ".join(_dump_value(item) for item in v) + "]"
+    if isinstance(v, dict):
+        raise ValueError("Nested dicts are not supported in frontmatter")
+    if isinstance(v, str):
+        if ":" in v or (v and v.startswith(_QUOTE_TRIGGER_CHARS)):
+            escaped = v.replace('"', '\\"')
+            return f'"{escaped}"'
+        return v
+    if v is None:
+        return '""'
+    raise ValueError(
+        f"Unserializable frontmatter value type: {type(v).__name__}"
+    )
+
+
+# --------------------------------------------------------------------------
+# High-level save_memory
+# --------------------------------------------------------------------------
+def save_memory(
+    category: str,
+    content: str,
+    *,
+    title: str | None = None,
+    tags: list[str] | None = None,
+    source: str | None = None,
+    extra_metadata: dict[str, Any] | None = None,
+) -> Path:
+    """Create a memory file under cyrus_home()/<category>/.
+
+    Composes make_memory_path + dump_frontmatter + filelock + atomic_write.
+    Builds default frontmatter: id (from filename hash), category, created
+    and updated (ISO-UTC, seconds precision), tags (defaults to []), and an
+    optional source. extra_metadata is merged in but cannot override core
+    fields. Returns the final Path. Raises ValueError if category invalid.
+    """
+    if category not in CATEGORIES:
+        raise ValueError(
+            f"Unknown category {category!r}. Valid: {CATEGORIES}"
+        )
+    when = datetime.now(timezone.utc)
+    effective_title = title or (
+        content.splitlines()[0][:80] if content.strip() else "untitled"
+    )
+    path = make_memory_path(category, effective_title, when=when)
+    # Re-extract id from filename so frontmatter and filename stay in sync.
+    id_hex = path.stem.split("_", 2)[1]
+    metadata: dict[str, Any] = {
+        "id": id_hex,
+        "category": category,
+        "created": when.isoformat(timespec="seconds"),
+        "updated": when.isoformat(timespec="seconds"),
+        "tags": list(tags) if tags else [],
+    }
+    if source is not None:
+        metadata["source"] = source
+    if extra_metadata:
+        for k, v in extra_metadata.items():
+            if k in metadata:
+                continue  # Core fields are not overridable
+            metadata[k] = v
+    document = dump_frontmatter(metadata, content)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with filelock(path, timeout=5.0):
+        atomic_write(path, document)
+    _log.info("saved memory %s", path.as_posix())
+    return path
