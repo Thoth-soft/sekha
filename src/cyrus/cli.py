@@ -32,7 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
     """Construct the root argparse parser with the `hook` sub-subparser tree."""
     parser = argparse.ArgumentParser(
         prog="cyrus",
-        description="Cyrus — AI memory system with hook-level rules enforcement",
+        description="Cyrus -- AI memory system with hook-level rules enforcement",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -56,11 +56,18 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # Phase 5: MCP stdio server. `claude mcp add cyrus -- cyrus serve`
-    # wires this into Claude Code. The subparser takes no arguments — the
+    # wires this into Claude Code. The subparser takes no arguments; the
     # server reads every directive off stdin as JSON-RPC frames.
     sub.add_parser(
         "serve",
         help="Run MCP stdio server (invoked by Claude Code via `claude mcp add cyrus`)",
+    )
+
+    # Phase 6: install/diagnostic/rules commands. Lazy-imported in main().
+    sub.add_parser(
+        "init",
+        help="Create ~/.cyrus/ tree, write config, register hook in "
+             "~/.claude/settings.json",
     )
 
     return parser
@@ -85,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 reconfigure(encoding="utf-8", errors="replace")
             except (ValueError, OSError):
-                pass  # stream already closed or non-reconfigurable — skip
+                pass  # stream already closed or non-reconfigurable; skip
 
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -115,11 +122,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "serve":
         # Lazy import: keeps `cyrus hook run` cold-start unaffected by the
         # server module (which pulls in cyrus.jsonrpc + cyrus.logutil at
-        # import time — cheap, but still not free on the hook path).
+        # import time; cheap, but still not free on the hook path).
         from cyrus.server import main as server_main
         return server_main()
 
-    # Unreachable — argparse would have exited on unknown commands.
+    if args.command == "init":
+        from cyrus._init import run as init_run
+        return init_run([])
+
+    # Unreachable: argparse would have exited on unknown commands.
     parser.error(f"unknown command: {args.command}")
     return 2
 
