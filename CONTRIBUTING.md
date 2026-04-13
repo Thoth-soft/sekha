@@ -35,9 +35,9 @@ Tests must pass on Windows, macOS, and Linux with Python 3.11, 3.12, and 3.13.
 ## Pull Requests
 
 - All PRs must pass CI on all matrix cells before merge
-- Zero runtime dependencies — do not add entries to `[project.dependencies]`
-- Use `pathlib.Path` for all filesystem operations — `os.path` is banned
-- All logging goes to stderr — stdout is reserved for protocol messages
+- Zero runtime dependencies -- do not add entries to `[project.dependencies]`
+- Use `pathlib.Path` for all filesystem operations -- `os.path` is banned
+- All logging goes to stderr -- stdout is reserved for protocol messages
 
 ## License
 
