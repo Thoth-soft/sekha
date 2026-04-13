@@ -116,8 +116,100 @@ def disable() -> int:
     return 0
 
 
-# bench() is implemented in plan 04-02. The CLI catches ImportError on the
-# bench subcommand and prints a friendly message in the meantime.
+def bench(argv: list[str] | None = None) -> int:
+    """Run `python -m cyrus.cli hook run` 100 times, report p50/p95/p99.
+
+    Measures real cold-start (Python interpreter launch + module imports +
+    rules load + evaluate + JSON emit) by shelling out rather than timing
+    in-process — in-process timing would hide exactly the overhead Claude
+    Code pays per tool call.
+
+    Exits 0 if p50 <= p50_budget_ms AND p95 <= p95_budget_ms; else 1.
+    Defaults: p50=50ms, p95=150ms (per HOOK-08). Override via env vars
+    CYRUS_HOOK_P50_MS and CYRUS_HOOK_P95_MS (mirrors the Phase 2 search
+    bench CYRUS_BENCH_P95_MS precedent).
+
+    Every import is local to this function — keeps `cyrus hook run` cold
+    start unaffected by bench code. `argv` accepted for future flag support
+    (e.g., --runs) but currently ignored.
+    """
+    import os
+    import shutil
+    import subprocess
+    import sys as _sys
+    import tempfile
+    import time
+    from pathlib import Path
+
+    del argv  # reserved for future flags; bench currently takes no args
+
+    RUNS = 100
+    p50_budget = float(os.environ.get("CYRUS_HOOK_P50_MS", "50"))
+    p95_budget = float(os.environ.get("CYRUS_HOOK_P95_MS", "150"))
+
+    # Locate fixtures relative to this module. src/cyrus/hook.py → repo root
+    # via three .parent hops. If the repo layout ever changes, this fails
+    # loud below (explicit error, exit 1) rather than silently timing an
+    # empty rules dir.
+    pkg_root = Path(__file__).resolve().parent.parent.parent
+    fixtures = pkg_root / "tests" / "fixtures" / "bench_rules"
+    event_path = pkg_root / "tests" / "fixtures" / "hook_events" / "bash_rm_rf.json"
+    if not fixtures.exists() or not event_path.exists():
+        _sys.stderr.write(
+            "cyrus hook bench: bench fixtures missing. "
+            "Run from a source checkout (editable install).\n"
+        )
+        return 1
+
+    event_bytes = event_path.read_bytes()
+
+    # Stage a temp CYRUS_HOME with the three bench rule fixtures. Isolates
+    # the bench from the user's real ~/.cyrus/rules/ so results are
+    # reproducible and the bench doesn't depend on what's installed locally.
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_home = Path(tmp)
+        rules_dir = tmp_home / "rules"
+        rules_dir.mkdir(parents=True)
+        for rule_file in fixtures.glob("*.md"):
+            shutil.copy(rule_file, rules_dir / rule_file.name)
+
+        env = {**os.environ, "CYRUS_HOME": str(tmp_home)}
+
+        # Warm-up run — excluded from the sample so the first-run
+        # filesystem cache miss doesn't contaminate p50.
+        subprocess.run(
+            [_sys.executable, "-m", "cyrus.cli", "hook", "run"],
+            input=event_bytes,
+            env=env,
+            capture_output=True,
+            timeout=10,
+        )
+
+        latencies_ms: list[float] = []
+        for _ in range(RUNS):
+            t0 = time.perf_counter()
+            subprocess.run(
+                [_sys.executable, "-m", "cyrus.cli", "hook", "run"],
+                input=event_bytes,
+                env=env,
+                capture_output=True,
+                timeout=10,
+            )
+            latencies_ms.append((time.perf_counter() - t0) * 1000.0)
+
+    latencies_ms.sort()
+    p50 = latencies_ms[RUNS // 2]
+    p95 = latencies_ms[int(RUNS * 0.95) - 1]
+    p99 = latencies_ms[int(RUNS * 0.99) - 1]
+    _sys.stderr.write(
+        f"p50={p50:.1f}ms p95={p95:.1f}ms p99={p99:.1f}ms runs={RUNS} "
+        f"budget_p50={p50_budget:.0f}ms budget_p95={p95_budget:.0f}ms\n"
+    )
+
+    if p50 > p50_budget or p95 > p95_budget:
+        _sys.stderr.write("cyrus hook bench: BUDGET EXCEEDED\n")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
