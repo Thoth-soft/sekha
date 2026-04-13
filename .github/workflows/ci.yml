@@ -28,3 +28,81 @@ jobs:
 
       - name: Run tests
         run: python -m unittest discover -s tests -v
+
+  install-test:
+    name: Fresh-VM install (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package (simulates `pip install cyrus` on fresh VM)
+        run: pip install -e .
+
+      - name: Verify cyrus console script is on PATH
+        shell: bash
+        run: |
+          which cyrus || command -v cyrus
+          cyrus --help
+
+      - name: Run cyrus init
+        shell: bash
+        run: |
+          cyrus init
+          echo "--- ~/.cyrus/ tree ---"
+          ls -la "$HOME/.cyrus" || dir "%USERPROFILE%\\.cyrus"
+          echo "--- ~/.claude/settings.json ---"
+          cat "$HOME/.claude/settings.json" || type "%USERPROFILE%\\.claude\\settings.json"
+
+      - name: Run cyrus doctor (JSON mode) and assert critical checks pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          cyrus doctor --json > doctor.json
+          cat doctor.json
+          python - <<'PY'
+          import json, sys
+          data = json.loads(open("doctor.json").read())
+          checks = {c["name"]: c for c in data["checks"]}
+          required = [
+              "python_version",
+              "cyrus_on_path",
+              "cyrus_home_writable",
+              "settings_hook_registered",
+              "mcp_canary",
+              "kill_switch",
+          ]
+          failures = [n for n in required if not checks.get(n, {}).get("ok")]
+          if failures:
+              print(f"FAIL: required checks not OK: {failures}", file=sys.stderr)
+              for n in failures:
+                  print(f"  {n}: {checks.get(n, {}).get('detail', '<missing>')}", file=sys.stderr)
+              sys.exit(1)
+          print("All required doctor checks passed.")
+          PY
+
+      - name: Run cyrus init again (idempotency smoke)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cyrus init
+          python - <<'PY'
+          import json, os
+          p = os.path.expanduser("~/.claude/settings.json")
+          data = json.loads(open(p).read())
+          count = 0
+          for entry in (data.get("hooks") or {}).get("PreToolUse") or []:
+              for h in entry.get("hooks") or []:
+                  if h.get("command") == "cyrus hook run":
+                      count += 1
+          assert count == 1, f"expected exactly 1 cyrus hook entry, got {count}"
+          print("Idempotency OK: exactly one cyrus hook entry.")
+          PY
