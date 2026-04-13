@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1.0
 milestone_name: "**Goal**: Ship v0.1.0. Replace the README skeleton from Phase 0 with a real one, document the threat model honestly"
 status: verifying
-stopped_at: Completed 04-02-PLAN.md (HOOK-08 bench + HOOK-10 runbook); 216 tests pass; awaiting user manual Claude Code integration test
-last_updated: "2026-04-13T00:44:46.161Z"
+stopped_at: "Completed 05-01-PLAN.md (protocol layer: jsonrpc/schemas/tools); 260 tests pass; CI green; ready for 05-02 server+cli"
+last_updated: "2026-04-13T01:06:01.732Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 12
 ---
 
@@ -58,6 +58,7 @@ Progress: [█░░░░░░░░░] 12%
 | Phase 03 P01 | 8 min | 5 tasks | 17 files |
 | Phase 04-pretool-hook P01 | 7 min | 3 tasks | 10 files |
 | Phase 04-pretool-hook P02 | 4min | 3 tasks | 6 files |
+| Phase 05-mcp-server P01 | 6 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 04-pretool-hook]: Hook bench is subprocess-based (not in-process) — only way to honestly measure Python cold-start Claude Code pays per tool call
 - [Phase 04-pretool-hook]: Windows CI needs CYRUS_HOOK_P50_MS=200 CYRUS_HOOK_P95_MS=300 overrides (Python cold-start floor ~130ms on Win11)
 - [Phase 04-pretool-hook]: HOOK-10 shipped as documented manual runbook (docs/hook-integration-test.md); automated headless-Claude-Code integration test deferred to v2
+- [Phase 05-mcp-server]: JsonRpcError subclasses ValueError with .code attribute — keeps server-loop catch surface trivial
+- [Phase 05-mcp-server]: cyrus_delete is scope-checked via Path.relative_to(cyrus_home()) — refuses arbitrary FS access by design
+- [Phase 05-mcp-server]: harden_stdio returns TextIOWrapper(write_through=True) over real-stdout.buffer — any buffering hangs Claude Code's blocking readline
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T00:44:46.156Z
-Stopped at: Completed 04-02-PLAN.md (HOOK-08 bench + HOOK-10 runbook); 216 tests pass; awaiting user manual Claude Code integration test
+Last session: 2026-04-13T01:06:01.727Z
+Stopped at: Completed 05-01-PLAN.md (protocol layer: jsonrpc/schemas/tools); 260 tests pass; CI green; ready for 05-02 server+cli
 Resume file: None

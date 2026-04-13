@@ -108,7 +108,7 @@ Plans:
   4. The server survives a `notifications/cancelled` mid-call without leaking state, and `ping` round-trips correctly.
 **Plans**: 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Protocol layer (jsonrpc stdio harden + schemas + 6 tool handlers); covers MCP-03..MCP-11
+- [x] 05-01-PLAN.md — Protocol layer (jsonrpc stdio harden + schemas + 6 tool handlers); covers MCP-03..MCP-11
 - [ ] 05-02-PLAN.md — Server main loop + `cyrus serve` CLI + subprocess integration tests (handshake, 3-version negotiation, stdout-pollution survival); covers MCP-01, MCP-02, MCP-12
 **UI hint**: no
 

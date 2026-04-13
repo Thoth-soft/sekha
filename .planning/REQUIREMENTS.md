@@ -63,15 +63,15 @@
 
 - [ ] **MCP-01**: MCP server runs over stdio using newline-delimited JSON-RPC 2.0 (NOT Content-Length framed). Implements: `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `ping`, `notifications/cancelled`.
 - [ ] **MCP-02**: Server accepts protocol versions `{2025-11-25, 2025-03-26, 2024-11-05}` and echoes back the version the client sent.
-- [ ] **MCP-03**: All 6 MCP tools are prefixed `cyrus_`: `cyrus_save`, `cyrus_search`, `cyrus_list`, `cyrus_delete`, `cyrus_status`, `cyrus_add_rule`. No more, no fewer.
-- [ ] **MCP-04**: `cyrus_save` — save memory with required `category`, `content`, optional `tags`, `source`. Returns the new memory ID.
-- [ ] **MCP-05**: `cyrus_search` — semantic-free full-text search with required `query`, optional `category`, `limit` (default 10). Returns ranked results with snippets.
-- [ ] **MCP-06**: `cyrus_list` — list memories with optional `category`, `limit`, `since`. Returns metadata only (no body).
-- [ ] **MCP-07**: `cyrus_delete` — delete memory by ID. Returns success/failure.
-- [ ] **MCP-08**: `cyrus_status` — returns total memory count, category breakdown, rules count, recent activity, hook error count.
-- [ ] **MCP-09**: `cyrus_add_rule` — create a new rule with required `name`, `severity`, `matches`, `pattern`, `message`. Validates the regex compiles before writing.
-- [ ] **MCP-10**: Stdio hardening: at server boot, `sys.stdout` is swapped to `sys.stderr` (any accidental `print()` goes to stderr). Windows stdin/stdout forced to binary mode + UTF-8.
-- [ ] **MCP-11**: CI lint rule: `grep -r 'print(' src/cyrus/server.py src/cyrus/tools.py` must return zero results.
+- [x] **MCP-03**: All 6 MCP tools are prefixed `cyrus_`: `cyrus_save`, `cyrus_search`, `cyrus_list`, `cyrus_delete`, `cyrus_status`, `cyrus_add_rule`. No more, no fewer.
+- [x] **MCP-04**: `cyrus_save` — save memory with required `category`, `content`, optional `tags`, `source`. Returns the new memory ID.
+- [x] **MCP-05**: `cyrus_search` — semantic-free full-text search with required `query`, optional `category`, `limit` (default 10). Returns ranked results with snippets.
+- [x] **MCP-06**: `cyrus_list` — list memories with optional `category`, `limit`, `since`. Returns metadata only (no body).
+- [x] **MCP-07**: `cyrus_delete` — delete memory by ID. Returns success/failure.
+- [x] **MCP-08**: `cyrus_status` — returns total memory count, category breakdown, rules count, recent activity, hook error count.
+- [x] **MCP-09**: `cyrus_add_rule` — create a new rule with required `name`, `severity`, `matches`, `pattern`, `message`. Validates the regex compiles before writing.
+- [x] **MCP-10**: Stdio hardening: at server boot, `sys.stdout` is swapped to `sys.stderr` (any accidental `print()` goes to stderr). Windows stdin/stdout forced to binary mode + UTF-8.
+- [x] **MCP-11**: CI lint rule: `grep -r 'print(' src/cyrus/server.py src/cyrus/tools.py` must return zero results.
 - [ ] **MCP-12**: Test harness: scripted JSON-RPC handshake sequences piped into the real server subprocess on all three OSes. Validates initialize → tools/list → tools/call round-trip.
 
 ### CLI & Install Experience (CLI)
@@ -168,15 +168,15 @@
 | HOOK-10 | Phase 4 | Complete |
 | MCP-01 | Phase 5 | Pending |
 | MCP-02 | Phase 5 | Pending |
-| MCP-03 | Phase 5 | Pending |
-| MCP-04 | Phase 5 | Pending |
-| MCP-05 | Phase 5 | Pending |
-| MCP-06 | Phase 5 | Pending |
-| MCP-07 | Phase 5 | Pending |
-| MCP-08 | Phase 5 | Pending |
-| MCP-09 | Phase 5 | Pending |
-| MCP-10 | Phase 5 | Pending |
-| MCP-11 | Phase 5 | Pending |
+| MCP-03 | Phase 5 | Complete |
+| MCP-04 | Phase 5 | Complete |
+| MCP-05 | Phase 5 | Complete |
+| MCP-06 | Phase 5 | Complete |
+| MCP-07 | Phase 5 | Complete |
+| MCP-08 | Phase 5 | Complete |
+| MCP-09 | Phase 5 | Complete |
+| MCP-10 | Phase 5 | Complete |
+| MCP-11 | Phase 5 | Complete |
 | MCP-12 | Phase 5 | Pending |
 | CLI-01 | Phase 6 | Pending |
 | CLI-02 | Phase 6 | Pending |
