@@ -87,12 +87,12 @@
 
 ### Documentation & Release (DOCS)
 
-- [ ] **DOCS-01**: README includes: install one-liner, 30-second "add a rule, see it block" demo, feature list, cross-client limitation prominently stated (hook enforcement is Claude Code only), link to examples.
-- [ ] **DOCS-02**: Threat model section in README: Cyrus is a consistency enforcer, not a security sandbox. AI could bypass via alternate tools. This is by design.
-- [ ] **DOCS-03**: Example rules library (`examples/rules/`): `confirm-before-destructive.md`, `no-force-push-main.md`, `always-use-absolute-paths.md`, `require-tests-before-commit.md`. Copy-paste ready.
-- [ ] **DOCS-04**: CONTRIBUTING.md with dev setup, test instructions, PR guidelines.
-- [ ] **DOCS-05**: CHANGELOG.md following Keep a Changelog format, starting at v0.1.0.
-- [ ] **DOCS-06**: Tagged v0.1.0 release on GitHub with release notes.
+- [x] **DOCS-01**: README includes: install one-liner, 30-second "add a rule, see it block" demo, feature list, cross-client limitation prominently stated (hook enforcement is Claude Code only), link to examples.
+- [x] **DOCS-02**: Threat model section in README: Cyrus is a consistency enforcer, not a security sandbox. AI could bypass via alternate tools. This is by design.
+- [x] **DOCS-03**: Example rules library (`examples/rules/`): `confirm-before-destructive.md`, `no-force-push-main.md`, `always-use-absolute-paths.md`, `require-tests-before-commit.md`. Copy-paste ready.
+- [x] **DOCS-04**: CONTRIBUTING.md with dev setup, test instructions, PR guidelines.
+- [x] **DOCS-05**: CHANGELOG.md following Keep a Changelog format, starting at v0.1.0.
+- [x] **DOCS-06**: Tagged v0.1.0 release on GitHub with release notes.
 - [ ] **DOCS-07**: Published to PyPI with the reserved name, installable via `pip install <name>`.
 
 ---
@@ -186,10 +186,10 @@
 | CLI-06 | Phase 6 | Pending |
 | CLI-07 | Phase 6 | Complete |
 | CLI-08 | Phase 6 | Complete |
-| DOCS-01 | Phase 7 | Pending |
-| DOCS-02 | Phase 7 | Pending |
-| DOCS-03 | Phase 7 | Pending |
-| DOCS-04 | Phase 7 | Pending |
-| DOCS-05 | Phase 7 | Pending |
-| DOCS-06 | Phase 7 | Pending |
+| DOCS-01 | Phase 7 | Complete |
+| DOCS-02 | Phase 7 | Complete |
+| DOCS-03 | Phase 7 | Complete |
+| DOCS-04 | Phase 7 | Complete |
+| DOCS-05 | Phase 7 | Complete |
+| DOCS-06 | Phase 7 | Complete |
 | DOCS-07 | Phase 7 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1.0
 milestone_name: "**Goal**: Ship v0.1.0. Replace the README skeleton from Phase 0 with a real one, document the threat model honestly"
 status: verifying
-stopped_at: Completed 06-02-PLAN.md (install-test CI job, CLI-08 release gate, all 3 OSes green)
-last_updated: "2026-04-13T01:44:38.172Z"
+stopped_at: Completed 07-01-PLAN.md (v0.1.0 released, PyPI upload pending user)
+last_updated: "2026-04-13T02:00:27.568Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 13
-  completed_plans: 13
+  completed_phases: 8
+  total_plans: 14
+  completed_plans: 14
   percent: 12
 ---
 
@@ -62,6 +62,7 @@ Progress: [█░░░░░░░░░] 12%
 | Phase 05-mcp-server P02 | 25min | 2 tasks | 3 files |
 | Phase 06-cli-install P01 | 25min | 4 tasks | 9 files |
 | Phase 06-cli-install P02 | 2min | 1 tasks | 1 files |
+| Phase 07 P01 | 6min | 7 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Recent decisions affecting current work:
 - [Phase 06-cli-install]: install-test CI job uses Python 3.11 only (one per OS); unit-test job already covers 3×3 matrix
 - [Phase 06-cli-install]: shell: bash on every install-test step for uniform Win/macOS/Linux semantics (Git Bash on Windows runner)
 - [Phase 06-cli-install]: 6 required doctor checks enforced in CI; recent_hook_errors informational-only; install-test has no needs: clause (parallel with unit tests)
+- [Phase 07]: ASCII-only Yes/No in cross-client README table (overrides CONTEXT Unicode checkmarks per project policy)
+- [Phase 07]: Example rules keep commentary in HTML comments AFTER the body so frontmatter parser (RULES-02) reads line-1 ---
+- [Phase 07]: Retagged v0.1.0 to the test-fix commit after CI caught a stale 0.0.0 version assertion in tests/test_placeholder.py
 
 ### Pending Todos
 
@@ -126,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T01:44:38.167Z
-Stopped at: Completed 06-02-PLAN.md (install-test CI job, CLI-08 release gate, all 3 OSes green)
+Last session: 2026-04-13T02:00:19.139Z
+Stopped at: Completed 07-01-PLAN.md (v0.1.0 released, PyPI upload pending user)
 Resume file: None
