@@ -7,10 +7,19 @@ Zero-dependency AI memory system with hook-level rules enforcement for Claude Co
 Every AI memory system stores rules. None of them enforce them.
 
 Sekha hooks into Claude Code's PreToolUse event to **actually block** tool calls
-that violate your rules -- the AI cannot bypass this, even with
-`--dangerously-skip-permissions`. Rules live as plain markdown files in
-`~/.sekha/rules/`, so your enforcement policy is as reviewable as any other
+whose inputs match a regex pattern you define -- the AI cannot bypass these,
+even with `--dangerously-skip-permissions`. Rules live as plain markdown files
+in `~/.sekha/rules/`, so your enforcement policy is as reviewable as any other
 config under version control.
+
+**What Sekha enforces (hard):** regex-matchable tool patterns --
+`rm -rf`, `git push --force`, `DROP TABLE`, etc. The PreToolUse hook
+vetoes the tool call before it runs.
+
+**What Sekha does NOT enforce:** behavioral rules like "always confirm before
+acting" or "no assumptions." Those remain prompt-level reminders and the AI
+can override them. See the [Threat Model](#threat-model) for why this is a
+fundamental limit of today's Claude Code hook surface, not a bug.
 
 [30-second demo: write rule -> claude tries to run rm -rf -> blocked with message]
 
@@ -30,8 +39,10 @@ wiring whenever you want a sanity check.
 
 - **Persistent memory** across sessions (conversations, decisions, preferences)
   stored as plain markdown files under `~/.sekha/`.
-- **Rules enforcement** at the hook level -- cannot be bypassed by the AI,
-  not even with `--dangerously-skip-permissions`.
+- **Tool-pattern rule enforcement** at the hook level. For regex matches
+  against tool inputs, the AI cannot bypass -- even with
+  `--dangerously-skip-permissions`. Behavioral rules ("always confirm",
+  "no assumptions") remain prompt-level and are overridable; see Threat Model.
 - **Zero dependencies** -- pure Python stdlib, no supply chain surface.
 - **Works with any MCP client** for memory (Claude Code, Cursor, Cline,
   Windsurf). Hook-level rule enforcement is Claude Code exclusive in v0.1.0.
@@ -72,17 +83,39 @@ tighten or loosen the pattern.
 
 ## Threat Model
 
-**Sekha is a consistency enforcer, not a security sandbox.**
+### What Sekha enforces
 
-The AI could bypass a rule by using a different tool -- if you block `Bash`
-with pattern `rm -rf`, the AI could use the `Write` tool to create a deletion
-script and then run it with a tool you did not cover. This is intentional.
-Sekha scopes rules to `tool_name` deliberately so your policy stays
+Regex patterns on tool inputs. If you write a rule that blocks the `Bash`
+tool when its `command` field matches `rm -rf`, the AI cannot bypass it.
+The PreToolUse hook runs as an out-of-process Python subprocess, evaluates
+rules, and returns `permissionDecision: "deny"` for matches. Survives
+`--dangerously-skip-permissions`.
+
+### What Sekha does NOT enforce
+
+Behavioral rules like "always confirm before editing," "don't guess," or
+"explain your plan first." These live in memory/context as reminders. The AI
+can and does ignore them. This is the class of rule for which no solution
+exists today at the Claude Code layer -- prompt-level reminders (CLAUDE.md,
+memory systems, warn-severity Sekha rules) all depend on voluntary
+compliance.
+
+There is no PreReason hook. Decisions happen in the AI's token stream between
+tool calls, where no subprocess can intervene. Anyone claiming otherwise is
+overselling.
+
+### Why tool-pattern enforcement is still a *consistency* enforcer, not a *security* sandbox
+
+Even within the things Sekha can block, the AI can work around a blocked
+pattern by choosing a different tool. If you block `Bash` matching `rm -rf`,
+the AI could `Write` a deletion script and invoke it via a tool you didn't
+cover. Sekha scopes rules to `tool_name` deliberately so your policy stays
 inspectable instead of hiding behind an opaque allowlist.
 
-Sekha exists to keep the AI honest about *intentions* you have made explicit,
-not to prevent a malicious AI from finding creative workarounds. For that,
-use OS-level sandboxing (container, VM, seccomp, etc.).
+For containment against a compromised or adversarial AI, use OS-level
+sandboxing -- container, VM, seccomp, etc. Sekha keeps the AI honest about
+intentions you have made explicit. It does not protect you from a creative
+agent actively working around your rules.
 
 ## Cross-Client Support
 

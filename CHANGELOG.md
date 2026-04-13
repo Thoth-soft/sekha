@@ -4,6 +4,19 @@ All notable changes to Sekha will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **README + Threat Model clarified** -- split "what Sekha enforces" into
+  two explicit categories:
+  - **Hard enforcement**: regex-matchable tool-input patterns (e.g., `rm -rf`,
+    `git push --force`). Survives `--dangerously-skip-permissions`.
+  - **Soft reminders**: behavioral rules ("always confirm", "no assumptions")
+    remain prompt-level and the AI can ignore them.
+- Previous phrasing implied all rule classes were hard-enforced. That was
+  inaccurate and is now corrected.
+
 ## [0.1.0] - 2026-04-12
 
 ### Added
