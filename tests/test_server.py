@@ -1,17 +1,24 @@
 """Tests for cyrus.server: handle_request dispatcher + CLI `serve` subcommand.
 
-Plan 05-02 Task 1 (in-process unit tests for handle_request + CLI wiring).
-Task 2 will extend this file with TestServerSubprocess covering subprocess
-integration tests that drive the real `cyrus serve` binary via stdio.
+Plan 05-02 Task 1 (TestHandleRequest + TestCli): in-process unit tests for
+the pure dict-in/dict-out dispatcher and argparse wiring.
 
-Every test here is synchronous and stream-free: handle_request is a pure
-function over dicts, which keeps unit tests fast and deterministic. The
-subprocess-spawning tests live in TestServerSubprocess (Task 2).
+Plan 05-02 Task 2 (TestServerSubprocess): subprocess integration tests that
+spawn real `python -m cyrus.cli serve` processes over pipes and drive the
+full JSON-RPC handshake. These catch the class of bugs that killed
+MemPalace — stdout buffering, Content-Length drift, Windows CRLF
+translation, stray prints from tool-handler imports — because those bugs
+only surface under real process spin-up.
 """
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import sys
 import tempfile
+import textwrap
+import threading
 import unittest
 from pathlib import Path
 
@@ -19,6 +26,7 @@ from cyrus.jsonrpc import (
     ACCEPTED_PROTOCOL_VERSIONS,
     INVALID_REQUEST,
     METHOD_NOT_FOUND,
+    PARSE_ERROR,
 )
 from cyrus.server import handle_request
 
@@ -246,6 +254,329 @@ class TestCli(unittest.TestCase):
         parser = _build_parser()
         args = parser.parse_args(["serve"])
         self.assertEqual(args.command, "serve")
+
+
+class TestServerSubprocess(unittest.TestCase):
+    """Integration tests: spawn `python -m cyrus.cli serve` over pipes.
+
+    Every test stages a fresh CYRUS_HOME tempdir with the five memory
+    categories pre-created so cyrus_status and friends walk a complete
+    filesystem layout. Pipes run in binary mode (bufsize=0, text=False)
+    so the Windows msvcrt.setmode binary path in harden_stdio is
+    actually exercised and the test encodes/decodes UTF-8 framing bytes
+    explicitly.
+    """
+
+    # Generous read timeout to absorb Windows CI jitter; each test kills
+    # the server on timeout via a threading.Timer so a hung readline
+    # surfaces as an assertion failure instead of wedging CI.
+    _READ_TIMEOUT = 8.0
+    # Grace period after stdin.close() for the server to flush + exit.
+    _SHUTDOWN_TIMEOUT = 5.0
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory(prefix="cyrus-srv-sp-")
+        self.home = Path(self._td.name)
+        for cat in ("sessions", "decisions", "preferences", "projects", "rules"):
+            (self.home / cat).mkdir()
+        # Seed env for every spawn in this test — isolates from the user's
+        # real ~/.cyrus/. Copied rather than mutated so parallel test
+        # invocations can't stomp each other's CYRUS_HOME.
+        self._env = {**os.environ, "CYRUS_HOME": str(self.home)}
+        self._procs: list[subprocess.Popen] = []
+
+    def tearDown(self):
+        for proc in self._procs:
+            if proc.poll() is None:
+                proc.kill()
+                try:
+                    proc.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    pass
+            # Close pipes to release OS handles (Windows is strict about this).
+            for stream in (proc.stdin, proc.stdout, proc.stderr):
+                if stream is not None:
+                    try:
+                        stream.close()
+                    except OSError:
+                        pass
+        self._td.cleanup()
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _spawn_server(self, argv: list[str] | None = None) -> subprocess.Popen:
+        """Launch the real server as a subprocess over binary pipes.
+
+        bufsize=0 + text=False is deliberate — we want to exercise the
+        same harden_stdio codepath Claude Code hits (real file descriptors,
+        binary mode on Windows) and control newline translation ourselves.
+        """
+        cmd = argv if argv is not None else [sys.executable, "-m", "cyrus.cli", "serve"]
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=self._env,
+            bufsize=0,
+        )
+        self._procs.append(proc)
+        return proc
+
+    def _write(self, proc: subprocess.Popen, payload: dict) -> None:
+        line = (json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8")
+        assert proc.stdin is not None
+        proc.stdin.write(line)
+        proc.stdin.flush()
+
+    def _read_response(
+        self, proc: subprocess.Popen, timeout: float | None = None
+    ) -> dict:
+        """Read one line from stdout, parsed as JSON. Kills proc on timeout."""
+        assert proc.stdout is not None
+        timeout = timeout if timeout is not None else self._READ_TIMEOUT
+        timer = threading.Timer(timeout, proc.kill)
+        timer.start()
+        try:
+            raw = proc.stdout.readline()
+        finally:
+            timer.cancel()
+        if not raw:
+            # Drain stderr for a readable failure message.
+            stderr_bytes = b""
+            try:
+                assert proc.stderr is not None
+                stderr_bytes = proc.stderr.read()
+            except Exception:  # noqa: BLE001
+                pass
+            raise AssertionError(
+                "server produced no response within "
+                f"{timeout:.1f}s; stderr:\n"
+                + stderr_bytes.decode("utf-8", errors="replace")
+            )
+        return json.loads(raw.decode("utf-8"))
+
+    def _rpc(self, proc: subprocess.Popen, payload: dict) -> dict | None:
+        """Write one request; read the response iff the request has an id."""
+        self._write(proc, payload)
+        if "id" not in payload:
+            return None
+        return self._read_response(proc)
+
+    def _close_and_wait(self, proc: subprocess.Popen) -> int:
+        """Close stdin, wait for clean shutdown, return exit code."""
+        assert proc.stdin is not None
+        proc.stdin.close()
+        try:
+            return proc.wait(timeout=self._SHUTDOWN_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            self.fail(
+                "server did not exit within "
+                f"{self._SHUTDOWN_TIMEOUT}s of stdin close"
+            )
+
+    # ------------------------------------------------------------------
+    # 15. Full happy-path handshake: initialize -> initialized -> tools/list
+    #     -> tools/call cyrus_status -> graceful shutdown
+    # ------------------------------------------------------------------
+    def test_full_handshake_plus_tools_list_plus_status(self):
+        proc = self._spawn_server()
+
+        init_resp = self._rpc(proc, {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "1"},
+            },
+        })
+        self.assertEqual(init_resp["result"]["protocolVersion"], "2025-03-26")
+        self.assertEqual(init_resp["result"]["serverInfo"]["name"], "cyrus")
+
+        # notifications/initialized — no response expected.
+        self._rpc(proc, {
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+        })
+
+        list_resp = self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/list",
+        })
+        tools = list_resp["result"]["tools"]
+        self.assertEqual(len(tools), 6)
+        for t in tools:
+            self.assertTrue(t["name"].startswith("cyrus_"))
+
+        status_resp = self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": {"name": "cyrus_status", "arguments": {}},
+        })
+        content = status_resp["result"]["content"]
+        self.assertEqual(content[0]["type"], "text")
+        status = json.loads(content[0]["text"])
+        for key in ("total", "by_category", "rules_count", "recent", "hook_errors"):
+            self.assertIn(key, status)
+
+        exit_code = self._close_and_wait(proc)
+        self.assertEqual(exit_code, 0)
+
+    # ------------------------------------------------------------------
+    # 16. Protocol-version echo-back across all three accepted versions
+    # ------------------------------------------------------------------
+    def test_handshake_with_all_three_protocol_versions(self):
+        for version in ACCEPTED_PROTOCOL_VERSIONS:
+            with self.subTest(protocolVersion=version):
+                proc = self._spawn_server()
+                resp = self._rpc(proc, {
+                    "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {"protocolVersion": version, "capabilities": {}},
+                })
+                self.assertEqual(resp["result"]["protocolVersion"], version)
+                self._close_and_wait(proc)
+
+    # ------------------------------------------------------------------
+    # 17. ping round-trip under a real subprocess
+    # ------------------------------------------------------------------
+    def test_ping_round_trip(self):
+        proc = self._spawn_server()
+        resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 1, "method": "ping"})
+        self.assertEqual(resp, {"jsonrpc": "2.0", "id": 1, "result": {}})
+        self._close_and_wait(proc)
+
+    # ------------------------------------------------------------------
+    # 18. Unknown method returns METHOD_NOT_FOUND; server still alive after
+    # ------------------------------------------------------------------
+    def test_unknown_method_returns_method_not_found(self):
+        proc = self._spawn_server()
+        err_resp = self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 1, "method": "prompts/list",
+        })
+        self.assertIn("error", err_resp)
+        self.assertEqual(err_resp["error"]["code"], METHOD_NOT_FOUND)
+        # Prove the server survived: a follow-up ping must reply.
+        ping_resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 2, "method": "ping"})
+        self.assertEqual(ping_resp["result"], {})
+        self._close_and_wait(proc)
+
+    # ------------------------------------------------------------------
+    # 19. Malformed JSON does not kill the server
+    # ------------------------------------------------------------------
+    def test_malformed_json_does_not_kill_server(self):
+        proc = self._spawn_server()
+        assert proc.stdin is not None
+        proc.stdin.write(b"not-json\n")
+        proc.stdin.flush()
+        parse_err = self._read_response(proc)
+        self.assertIn("error", parse_err)
+        self.assertEqual(parse_err["error"]["code"], PARSE_ERROR)
+        self.assertIsNone(parse_err["id"])  # id unrecoverable on parse error
+
+        # Server must still handle subsequent requests.
+        ping_resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 1, "method": "ping"})
+        self.assertEqual(ping_resp["result"], {})
+        self._close_and_wait(proc)
+
+    # ------------------------------------------------------------------
+    # 20. Stray print() in a handler does NOT corrupt the protocol stream
+    #     (the killer test — proves harden_stdio works under real process)
+    # ------------------------------------------------------------------
+    def test_stray_print_in_handler_does_not_corrupt_protocol_stream(self):
+        # Shim: monkeypatch cyrus.tools.HANDLERS["cyrus_status"] to print
+        # to stdout BEFORE returning the real status. Without harden_stdio,
+        # that print would land on protocol stdout and corrupt the frame.
+        shim = textwrap.dedent(
+            """
+            import cyrus.tools as t
+            _orig = t.cyrus_status
+            def noisy(**kwargs):
+                print("OOPS pollution on stdout")  # would kill MemPalace
+                return _orig(**kwargs)
+            t.cyrus_status = noisy
+            t.HANDLERS["cyrus_status"] = noisy
+            from cyrus.server import main
+            raise SystemExit(main())
+            """
+        )
+        proc = self._spawn_server([sys.executable, "-c", shim])
+
+        # Handshake then call cyrus_status.
+        self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {"protocolVersion": "2025-03-26", "capabilities": {}},
+        })
+        self._rpc(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"})
+
+        resp = self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "cyrus_status", "arguments": {}},
+        })
+        # Assertion 1: response parses as a well-formed JSON-RPC result —
+        # NOT the "OOPS pollution" string. This proves stdout wasn't
+        # corrupted by the handler's print.
+        self.assertEqual(resp["jsonrpc"], "2.0")
+        self.assertEqual(resp["id"], 2)
+        self.assertIn("result", resp)
+        status = json.loads(resp["result"]["content"][0]["text"])
+        self.assertIn("total", status)
+
+        # Follow-up ping must still round-trip cleanly — proving the
+        # stream isn't desynced after the pollution attempt.
+        ping_resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 3, "method": "ping"})
+        self.assertEqual(ping_resp["result"], {})
+
+        # Close stdin, let the server shut down, then drain stderr.
+        assert proc.stdin is not None
+        proc.stdin.close()
+        try:
+            proc.wait(timeout=self._SHUTDOWN_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            self.fail("shim server did not exit cleanly")
+        assert proc.stderr is not None
+        stderr_bytes = proc.stderr.read()
+        # Assertion 2 (behavioral proof): the "OOPS" bytes DID get emitted —
+        # they just landed on stderr, not stdout, thanks to harden_stdio.
+        self.assertIn(
+            b"OOPS",
+            stderr_bytes,
+            "stray print did not reach stderr; harden_stdio may have failed",
+        )
+
+    # ------------------------------------------------------------------
+    # 21. notifications/cancelled mid-session does not crash the server
+    # ------------------------------------------------------------------
+    def test_notifications_cancelled_does_not_crash(self):
+        proc = self._spawn_server()
+        self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {"protocolVersion": "2025-03-26", "capabilities": {}},
+        })
+        # Cancellation notification — no response expected, must not crash.
+        self._rpc(proc, {
+            "jsonrpc": "2.0",
+            "method": "notifications/cancelled",
+            "params": {"requestId": 42},
+        })
+        # Ping proves server is alive.
+        ping_resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 2, "method": "ping"})
+        self.assertEqual(ping_resp["result"], {})
+        self._close_and_wait(proc)
+
+    # ------------------------------------------------------------------
+    # 22. Server exits cleanly on stdin close (EOF path)
+    # ------------------------------------------------------------------
+    def test_server_exits_cleanly_on_stdin_close(self):
+        proc = self._spawn_server()
+        self._rpc(proc, {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {"protocolVersion": "2025-03-26", "capabilities": {}},
+        })
+        exit_code = self._close_and_wait(proc)
+        self.assertEqual(exit_code, 0)
 
 
 if __name__ == "__main__":
