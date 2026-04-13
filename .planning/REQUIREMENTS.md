@@ -48,15 +48,15 @@
 
 ### PreToolUse Hook (HOOK)
 
-- [ ] **HOOK-01**: Hook entry point registered as `cyrus hook run` (Python console script via pyproject.toml). No shell scripts.
-- [ ] **HOOK-02**: Hook reads JSON event from stdin matching Claude Code's PreToolUse schema (`session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`, `tool_name`, `tool_input`, `tool_use_id`).
-- [ ] **HOOK-03**: On rule match with `severity: block`, hook emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "<message>"}}` to stdout and exits 0.
-- [ ] **HOOK-04**: On rule match with `severity: warn`, hook emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "<warning>"}}` to stdout and allows the call.
-- [ ] **HOOK-05**: Belt-and-suspenders: hook also writes blocking reason to stderr and optionally exits 2 as a fallback if stdout JSON is ignored.
-- [ ] **HOOK-06**: Hook fail-open policy: any exception is caught at top level, logged to `~/.cyrus/hook-errors.log`, a warning written to stderr, and the hook exits 0 (allow). Never locks Claude Code out of tool calls.
-- [ ] **HOOK-07**: Kill switch: 3 consecutive hook errors cause it to auto-disable by writing a marker file. `cyrus doctor` surfaces this.
+- [x] **HOOK-01**: Hook entry point registered as `cyrus hook run` (Python console script via pyproject.toml). No shell scripts.
+- [x] **HOOK-02**: Hook reads JSON event from stdin matching Claude Code's PreToolUse schema (`session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`, `tool_name`, `tool_input`, `tool_use_id`).
+- [x] **HOOK-03**: On rule match with `severity: block`, hook emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "<message>"}}` to stdout and exits 0.
+- [x] **HOOK-04**: On rule match with `severity: warn`, hook emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "<warning>"}}` to stdout and allows the call.
+- [x] **HOOK-05**: Belt-and-suspenders: hook also writes blocking reason to stderr and optionally exits 2 as a fallback if stdout JSON is ignored.
+- [x] **HOOK-06**: Hook fail-open policy: any exception is caught at top level, logged to `~/.cyrus/hook-errors.log`, a warning written to stderr, and the hook exits 0 (allow). Never locks Claude Code out of tool calls.
+- [x] **HOOK-07**: Kill switch: 3 consecutive hook errors cause it to auto-disable by writing a marker file. `cyrus doctor` surfaces this.
 - [ ] **HOOK-08**: **Performance budget: p50 under 50ms, p95 under 150ms** measured by `cyrus hook bench` over 100 runs on all three OSes. CI gate fails the build if exceeded.
-- [ ] **HOOK-09**: Lazy imports — top of `hook.py` imports only `sys`, `json`. All other imports inside functions. `python -X importtime cyrus.hook` shows <30ms total import time.
+- [x] **HOOK-09**: Lazy imports — top of `hook.py` imports only `sys`, `json`. All other imports inside functions. `python -X importtime cyrus.hook` shows <30ms total import time.
 - [ ] **HOOK-10**: End-to-end integration test: install a rule that blocks all `Bash` tool calls, invoke Claude Code with a Bash command, assert the block message appears and the command did not execute. Runs on every release.
 
 ### MCP Server (MCP)
@@ -156,15 +156,15 @@
 | RULES-06 | Phase 3 | Complete |
 | RULES-07 | Phase 3 | Complete |
 | RULES-08 | Phase 3 | Complete |
-| HOOK-01 | Phase 4 | Pending |
-| HOOK-02 | Phase 4 | Pending |
-| HOOK-03 | Phase 4 | Pending |
-| HOOK-04 | Phase 4 | Pending |
-| HOOK-05 | Phase 4 | Pending |
-| HOOK-06 | Phase 4 | Pending |
-| HOOK-07 | Phase 4 | Pending |
+| HOOK-01 | Phase 4 | Complete |
+| HOOK-02 | Phase 4 | Complete |
+| HOOK-03 | Phase 4 | Complete |
+| HOOK-04 | Phase 4 | Complete |
+| HOOK-05 | Phase 4 | Complete |
+| HOOK-06 | Phase 4 | Complete |
+| HOOK-07 | Phase 4 | Complete |
 | HOOK-08 | Phase 4 | Pending |
-| HOOK-09 | Phase 4 | Pending |
+| HOOK-09 | Phase 4 | Complete |
 | HOOK-10 | Phase 4 | Pending |
 | MCP-01 | Phase 5 | Pending |
 | MCP-02 | Phase 5 | Pending |

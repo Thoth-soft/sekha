@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1.0
 milestone_name: "**Goal**: Ship v0.1.0. Replace the README skeleton from Phase 0 with a real one, document the threat model honestly"
 status: verifying
-stopped_at: Completed 03-01-PLAN.md (rules engine, RULES-01..08 closed; CI green)
-last_updated: "2026-04-13T00:13:36.251Z"
+stopped_at: Completed 04-01-PLAN.md (HOOK-01..07 + HOOK-09 green; 215 tests pass; smoke test confirms block+exit 2)
+last_updated: "2026-04-13T00:34:54.017Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
   percent: 12
 ---
 
@@ -56,6 +56,7 @@ Progress: [█░░░░░░░░░] 12%
 | Phase 02 P01 | 7 min | 4 tasks | 4 files |
 | Phase 02-search-engine P02 | 40min | 2 tasks | 4 files |
 | Phase 03 P01 | 8 min | 5 tasks | 17 files |
+| Phase 04-pretool-hook P01 | 7 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Cache full parsed rule list per directory; apply trigger/tool/pause filters post-cache — changing filter args costs zero I/O
 - [Phase 03]: assertLogs over contextlib.redirect_stderr for logger-output capture — StreamHandler binds sys.stderr at configure time
 - [Phase 03]: Tuple-typed triggers/matches in Rule dataclass so frozen dataclass is hashable
+- [Phase 04-pretool-hook]: Kill-switch SoT is the error-log tail (_KILL_WINDOW_SECONDS=600, _KILL_THRESHOLD=3). No side counter — file is the truth, crash-safe, zero extra I/O.
+- [Phase 04-pretool-hook]: hook.py module-top imports restricted to {sys, json, __future__}; ast-introspection test enforces it structurally. Every cyrus.* import lives inside _run().
+- [Phase 04-pretool-hook]: CLI entry reconfigures stdout+stderr to utf-8/replace (Pitfall 4 fix, Rule 2 deviation) — defense-in-depth against future non-ASCII help text.
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T00:13:30.915Z
-Stopped at: Completed 03-01-PLAN.md (rules engine, RULES-01..08 closed; CI green)
+Last session: 2026-04-13T00:34:54.012Z
+Stopped at: Completed 04-01-PLAN.md (HOOK-01..07 + HOOK-09 green; 215 tests pass; smoke test confirms block+exit 2)
 Resume file: None
