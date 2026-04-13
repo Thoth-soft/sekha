@@ -106,7 +106,10 @@ Plans:
   2. From within Claude Code, all 6 `cyrus_` tools are discoverable via `tools/list`, and each tool round-trips a real call: save returns an ID, search returns ranked snippets, list returns metadata, delete removes, status reports counts, add_rule validates regex compilation before writing.
   3. **HARD CI LINT GATE**: `grep -r 'print(' src/cyrus/server.py src/cyrus/tools.py` returns zero results. The build fails if a stray `print(` exists. Additionally, at server boot `sys.stdout` is swapped to `sys.stderr` and Windows stdin/stdout is forced to binary mode + UTF-8.
   4. The server survives a `notifications/cancelled` mid-call without leaking state, and `ping` round-trips correctly.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Protocol layer (jsonrpc stdio harden + schemas + 6 tool handlers); covers MCP-03..MCP-11
+- [ ] 05-02-PLAN.md — Server main loop + `cyrus serve` CLI + subprocess integration tests (handshake, 3-version negotiation, stdout-pollution survival); covers MCP-01, MCP-02, MCP-12
 **UI hint**: no
 
 ### Phase 6: CLI & Install Experience
@@ -146,6 +149,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Search Engine | 0/2 | Not started | - |
 | 3. Rules Engine | 0/1 | Not started | - |
 | 4. PreToolUse Hook | 1/2 | In Progress|  |
-| 5. MCP Server | 0/TBD | Not started | - |
+| 5. MCP Server | 0/2 | Not started | - |
 | 6. CLI & Install Experience | 0/TBD | Not started | - |
 | 7. Polish, Docs & Release | 0/TBD | Not started | - |
