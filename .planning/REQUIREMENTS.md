@@ -61,8 +61,8 @@
 
 ### MCP Server (MCP)
 
-- [ ] **MCP-01**: MCP server runs over stdio using newline-delimited JSON-RPC 2.0 (NOT Content-Length framed). Implements: `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `ping`, `notifications/cancelled`.
-- [ ] **MCP-02**: Server accepts protocol versions `{2025-11-25, 2025-03-26, 2024-11-05}` and echoes back the version the client sent.
+- [x] **MCP-01**: MCP server runs over stdio using newline-delimited JSON-RPC 2.0 (NOT Content-Length framed). Implements: `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `ping`, `notifications/cancelled`.
+- [x] **MCP-02**: Server accepts protocol versions `{2025-11-25, 2025-03-26, 2024-11-05}` and echoes back the version the client sent.
 - [x] **MCP-03**: All 6 MCP tools are prefixed `cyrus_`: `cyrus_save`, `cyrus_search`, `cyrus_list`, `cyrus_delete`, `cyrus_status`, `cyrus_add_rule`. No more, no fewer.
 - [x] **MCP-04**: `cyrus_save` — save memory with required `category`, `content`, optional `tags`, `source`. Returns the new memory ID.
 - [x] **MCP-05**: `cyrus_search` — semantic-free full-text search with required `query`, optional `category`, `limit` (default 10). Returns ranked results with snippets.
@@ -72,7 +72,7 @@
 - [x] **MCP-09**: `cyrus_add_rule` — create a new rule with required `name`, `severity`, `matches`, `pattern`, `message`. Validates the regex compiles before writing.
 - [x] **MCP-10**: Stdio hardening: at server boot, `sys.stdout` is swapped to `sys.stderr` (any accidental `print()` goes to stderr). Windows stdin/stdout forced to binary mode + UTF-8.
 - [x] **MCP-11**: CI lint rule: `grep -r 'print(' src/cyrus/server.py src/cyrus/tools.py` must return zero results.
-- [ ] **MCP-12**: Test harness: scripted JSON-RPC handshake sequences piped into the real server subprocess on all three OSes. Validates initialize → tools/list → tools/call round-trip.
+- [x] **MCP-12**: Test harness: scripted JSON-RPC handshake sequences piped into the real server subprocess on all three OSes. Validates initialize → tools/list → tools/call round-trip.
 
 ### CLI & Install Experience (CLI)
 
@@ -166,8 +166,8 @@
 | HOOK-08 | Phase 4 | Complete |
 | HOOK-09 | Phase 4 | Complete |
 | HOOK-10 | Phase 4 | Complete |
-| MCP-01 | Phase 5 | Pending |
-| MCP-02 | Phase 5 | Pending |
+| MCP-01 | Phase 5 | Complete |
+| MCP-02 | Phase 5 | Complete |
 | MCP-03 | Phase 5 | Complete |
 | MCP-04 | Phase 5 | Complete |
 | MCP-05 | Phase 5 | Complete |
@@ -177,7 +177,7 @@
 | MCP-09 | Phase 5 | Complete |
 | MCP-10 | Phase 5 | Complete |
 | MCP-11 | Phase 5 | Complete |
-| MCP-12 | Phase 5 | Pending |
+| MCP-12 | Phase 5 | Complete |
 | CLI-01 | Phase 6 | Pending |
 | CLI-02 | Phase 6 | Pending |
 | CLI-03 | Phase 6 | Pending |

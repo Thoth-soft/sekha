@@ -109,7 +109,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 05-01-PLAN.md — Protocol layer (jsonrpc stdio harden + schemas + 6 tool handlers); covers MCP-03..MCP-11
-- [ ] 05-02-PLAN.md — Server main loop + `cyrus serve` CLI + subprocess integration tests (handshake, 3-version negotiation, stdout-pollution survival); covers MCP-01, MCP-02, MCP-12
+- [x] 05-02-PLAN.md — Server main loop + `cyrus serve` CLI + subprocess integration tests (handshake, 3-version negotiation, stdout-pollution survival); covers MCP-01, MCP-02, MCP-12
 **UI hint**: no
 
 ### Phase 6: CLI & Install Experience
