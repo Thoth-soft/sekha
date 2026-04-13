@@ -59,6 +59,14 @@ from cyrus.paths import category_dir
 
 _log = get_logger(__name__)
 
+__all__ = (
+    "Rule",
+    "load_rules",
+    "evaluate",
+    "test_rule",
+    "clear_cache",
+)
+
 _PAUSE_ENV = "CYRUS_PAUSE"
 
 # Cache: resolved-dir-str → (dir_cache_key, parsed_rule_list).
