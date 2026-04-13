@@ -1,0 +1,12 @@
+{
+  "session_id": "test-session-abc",
+  "transcript_path": "/tmp/transcript-abc.jsonl",
+  "cwd": "/tmp/workspace",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Read",
+  "tool_input": {
+    "file_path": "/tmp/x.txt"
+  },
+  "tool_use_id": "toolu_03ghi"
+}
