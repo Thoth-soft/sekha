@@ -124,7 +124,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 06-01-PLAN.md -- CLI commands: init, doctor, add-rule, list-rules (CLI-01..05, 07). CLI-06 already shipped in Phase 4 / 04-02.
-- [ ] 06-02-PLAN.md -- Fresh-VM install-test CI job on ubuntu/macos/windows (CLI-08 HARD RELEASE GATE)
+- [x] 06-02-PLAN.md -- Fresh-VM install-test CI job on ubuntu/macos/windows (CLI-08 HARD RELEASE GATE)
 **UI hint**: no
 
 ### Phase 7: Polish, Docs & Release v0.1.0
