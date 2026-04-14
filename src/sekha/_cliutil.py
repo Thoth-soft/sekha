@@ -217,3 +217,68 @@ def say(message: str, stream: TextIO | None = None) -> None:
         # Stream may be a StringIO that still supports flush, or a real
         # stream that's closed. Either way, the bytes are in the buffer.
         pass
+
+
+# ----------------------------------------------------------------------
+# MCP auto-registration (v0.1.2+)
+# ----------------------------------------------------------------------
+def register_claude_mcp(
+    command: list[str] | None = None,
+    *,
+    timeout: float = 30.0,
+) -> tuple[str, str]:
+    """Try to register the Sekha MCP server with Claude Code.
+
+    Shells out to `claude mcp add sekha --scope user -- python -m sekha.cli
+    serve` (customizable via `command`). Never raises. Returns a (status,
+    detail) tuple where status is one of:
+
+      "registered"  -- `claude mcp add` succeeded, server freshly added
+      "already"     -- server was already registered (idempotent re-run)
+      "no_claude"   -- `claude` CLI is not on PATH; user likely hasn't
+                       installed Claude Code
+      "error"       -- subprocess returned nonzero; `detail` has the stderr
+
+    Callers use this to decide whether to auto-register silently or print
+    the manual `claude mcp add` hint as a fallback.
+    """
+    import shutil
+    import subprocess
+
+    claude = shutil.which("claude")
+    if not claude:
+        return ("no_claude", "claude CLI not on PATH")
+
+    args = command or [
+        claude,
+        "mcp",
+        "add",
+        "sekha",
+        "--scope",
+        "user",
+        "--",
+        "python",
+        "-m",
+        "sekha.cli",
+        "serve",
+    ]
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return ("error", f"subprocess error: {exc}")
+
+    if result.returncode == 0:
+        return ("registered", (result.stdout or "").strip())
+
+    stderr = (result.stderr or result.stdout or "").strip()
+    # `claude mcp add` returns nonzero when the name already exists in the
+    # target scope. Treat that as idempotent success.
+    if "already exists" in stderr.lower() or "already configured" in stderr.lower():
+        return ("already", stderr)
+    return ("error", stderr or "unknown error")

@@ -48,10 +48,18 @@ class InitTestBase(unittest.TestCase):
         self._home_patch = mock.patch(
             "pathlib.Path.home", return_value=self.fake_home
         )
+        # By default, pretend MCP registration succeeded. Individual tests
+        # that care about failure modes can re-patch this explicitly.
+        self._mcp_patch = mock.patch(
+            "sekha._init.register_claude_mcp",
+            return_value=("registered", ""),
+        )
         self._env_patch.start()
         self._home_patch.start()
+        self._mcp_patch.start()
 
     def tearDown(self) -> None:
+        self._mcp_patch.stop()
         self._home_patch.stop()
         self._env_patch.stop()
         self._td.cleanup()
@@ -92,14 +100,83 @@ class TestFreshInstall(InitTestBase):
         data = json.loads(settings_path.read_text(encoding="utf-8"))
         self.assertEqual(_count_sekha_hook_commands(data), 1)
 
-    def test_prints_claude_mcp_add_hint_to_stdout(self) -> None:
-        _, out, _ = self._run_init()
+    def test_skip_mcp_prints_claude_mcp_add_hint_to_stdout(self) -> None:
+        _, out, _ = self._run_init(["--skip-mcp"])
         self.assertIn("claude mcp add sekha -- sekha serve", out)
+
+    def test_auto_register_suppresses_hint_on_success(self) -> None:
+        # Default base-class mock returns ("registered", ""); hint should
+        # NOT appear on stdout when we auto-registered successfully.
+        _, out, err = self._run_init()
+        self.assertNotIn("claude mcp add sekha -- sekha serve", out)
+        self.assertIn("[OK] registered MCP server", err)
 
     def test_progress_goes_to_stderr(self) -> None:
         _, out, err = self._run_init()
         # Status lines like "[OK] created ..." belong on stderr.
         self.assertIn("[OK]", err)
+
+
+class TestMcpRegistrationBranches(InitTestBase):
+    """Verify each register_claude_mcp() status maps to the right output."""
+
+    def _run_with_mcp(self, return_value: tuple[str, str]) -> tuple[int, str, str]:
+        # Replace the base-class mock for this test only.
+        self._mcp_patch.stop()
+        patcher = mock.patch(
+            "sekha._init.register_claude_mcp", return_value=return_value
+        )
+        patcher.start()
+        try:
+            return self._run_init()
+        finally:
+            patcher.stop()
+            # Re-start the default mock so tearDown's stop() is balanced.
+            self._mcp_patch = mock.patch(
+                "sekha._init.register_claude_mcp",
+                return_value=("registered", ""),
+            )
+            self._mcp_patch.start()
+
+    def test_already_registered_is_clean_success(self) -> None:
+        rc, out, err = self._run_with_mcp(("already", "sekha already exists"))
+        self.assertEqual(rc, 0)
+        self.assertNotIn("claude mcp add sekha -- sekha serve", out)
+        self.assertIn("already registered", err)
+
+    def test_no_claude_falls_back_to_hint(self) -> None:
+        rc, out, err = self._run_with_mcp(("no_claude", "claude CLI not on PATH"))
+        self.assertEqual(rc, 0)
+        self.assertIn("claude mcp add sekha -- sekha serve", out)
+        self.assertIn("[WARN] claude CLI not found", err)
+
+    def test_error_falls_back_to_hint_but_exits_zero(self) -> None:
+        rc, out, err = self._run_with_mcp(("error", "network timeout"))
+        self.assertEqual(rc, 0, "MCP failure must not fail the whole init")
+        self.assertIn("claude mcp add sekha -- sekha serve", out)
+        self.assertIn("network timeout", err)
+
+    def test_skip_flag_does_not_call_register(self) -> None:
+        # Replace with a spy so we can assert it wasn't called.
+        self._mcp_patch.stop()
+        spy = mock.patch(
+            "sekha._init.register_claude_mcp",
+            side_effect=AssertionError(
+                "register_claude_mcp must not be called when --skip-mcp is set"
+            ),
+        )
+        spy.start()
+        try:
+            rc, out, _ = self._run_init(["--skip-mcp"])
+        finally:
+            spy.stop()
+            self._mcp_patch = mock.patch(
+                "sekha._init.register_claude_mcp",
+                return_value=("registered", ""),
+            )
+            self._mcp_patch.start()
+        self.assertEqual(rc, 0)
+        self.assertIn("claude mcp add sekha -- sekha serve", out)
 
 
 class TestIdempotent(InitTestBase):

@@ -33,6 +33,7 @@ from pathlib import Path
 from sekha._cliutil import (
     backup_file,
     merge_claude_settings,
+    register_claude_mcp,
     say,
     write_json_atomic,
 )
@@ -58,10 +59,18 @@ def run(argv: list[str] | None = None) -> int:
     """Execute `sekha init`. Returns process exit code (0 on success)."""
     parser = argparse.ArgumentParser(
         prog="sekha init",
-        description="Create ~/.sekha/ tree, write config, register hook in "
-                    "~/.claude/settings.json",
+        description="Create ~/.sekha/ tree, write config, register the hook "
+                    "in ~/.claude/settings.json, and auto-register the MCP "
+                    "server with Claude Code.",
     )
-    parser.parse_args(argv or [])
+    parser.add_argument(
+        "--skip-mcp",
+        action="store_true",
+        help="Do not call `claude mcp add`; print the manual command instead. "
+             "Use if you do not have the `claude` CLI or want to register the "
+             "MCP server by hand.",
+    )
+    args = parser.parse_args(argv or [])
 
     # 1. ~/.sekha/ tree + category subdirs.
     home = sekha_home()
@@ -105,8 +114,25 @@ def run(argv: list[str] | None = None) -> int:
     else:
         say("[OK] sekha hook already registered in settings.json")
 
-    # 4. Tell the user what to do next. STDOUT so pipelines can capture it.
-    sys.stdout.write(_MCP_ADD_HINT)
+    # 4. MCP server registration — auto by default, skippable with --skip-mcp.
+    if args.skip_mcp:
+        say("[SKIP] MCP auto-registration skipped (--skip-mcp)")
+        sys.stdout.write(_MCP_ADD_HINT)
+    else:
+        status, detail = register_claude_mcp()
+        if status == "registered":
+            say("[OK] registered MCP server with Claude Code (user scope)")
+            say("Verify with: sekha doctor")
+        elif status == "already":
+            say("[OK] MCP server already registered with Claude Code")
+            say("Verify with: sekha doctor")
+        elif status == "no_claude":
+            say("[WARN] claude CLI not found on PATH; register manually:")
+            sys.stdout.write(_MCP_ADD_HINT)
+        else:  # "error"
+            say(f"[WARN] could not auto-register MCP: {detail}")
+            sys.stdout.write(_MCP_ADD_HINT)
+
     try:
         sys.stdout.flush()
     except (ValueError, OSError):

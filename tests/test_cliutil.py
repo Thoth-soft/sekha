@@ -220,5 +220,69 @@ class TestSay(unittest.TestCase):
         self.assertEqual(buf.getvalue(), "[OK] ready\n")
 
 
+class TestRegisterClaudeMcp(unittest.TestCase):
+    """Each possible outcome of `claude mcp add` maps to the right status."""
+
+    def test_no_claude_on_path_returns_no_claude(self) -> None:
+        from sekha._cliutil import register_claude_mcp
+        with mock.patch("shutil.which", return_value=None):
+            status, detail = register_claude_mcp()
+        self.assertEqual(status, "no_claude")
+        self.assertIn("PATH", detail)
+
+    def test_successful_add_returns_registered(self) -> None:
+        from sekha._cliutil import register_claude_mcp
+        fake_result = mock.Mock(returncode=0, stdout="Added server sekha", stderr="")
+        with mock.patch("shutil.which", return_value="/usr/bin/claude"), \
+             mock.patch("subprocess.run", return_value=fake_result):
+            status, _ = register_claude_mcp()
+        self.assertEqual(status, "registered")
+
+    def test_already_exists_error_returns_already(self) -> None:
+        from sekha._cliutil import register_claude_mcp
+        fake_result = mock.Mock(
+            returncode=1,
+            stdout="",
+            stderr="Error: MCP server 'sekha' already exists in user config",
+        )
+        with mock.patch("shutil.which", return_value="/usr/bin/claude"), \
+             mock.patch("subprocess.run", return_value=fake_result):
+            status, detail = register_claude_mcp()
+        self.assertEqual(status, "already")
+        self.assertIn("already exists", detail)
+
+    def test_generic_failure_returns_error(self) -> None:
+        from sekha._cliutil import register_claude_mcp
+        fake_result = mock.Mock(
+            returncode=1, stdout="", stderr="network unreachable"
+        )
+        with mock.patch("shutil.which", return_value="/usr/bin/claude"), \
+             mock.patch("subprocess.run", return_value=fake_result):
+            status, detail = register_claude_mcp()
+        self.assertEqual(status, "error")
+        self.assertIn("network unreachable", detail)
+
+    def test_subprocess_os_error_returns_error(self) -> None:
+        from sekha._cliutil import register_claude_mcp
+        with mock.patch("shutil.which", return_value="/usr/bin/claude"), \
+             mock.patch("subprocess.run", side_effect=OSError("permission denied")):
+            status, detail = register_claude_mcp()
+        self.assertEqual(status, "error")
+        self.assertIn("permission denied", detail)
+
+    def test_invokes_correct_command_shape(self) -> None:
+        from sekha._cliutil import register_claude_mcp
+        fake_result = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch("shutil.which", return_value="/path/to/claude"), \
+             mock.patch("subprocess.run", return_value=fake_result) as m:
+            register_claude_mcp()
+        args = m.call_args[0][0]
+        self.assertEqual(args[0], "/path/to/claude")
+        self.assertEqual(args[1:5], ["mcp", "add", "sekha", "--scope"])
+        self.assertEqual(args[5], "user")
+        self.assertEqual(args[6], "--")
+        self.assertEqual(args[7:], ["python", "-m", "sekha.cli", "serve"])
+
+
 if __name__ == "__main__":
     unittest.main()

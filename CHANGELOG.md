@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-04-14
+
+### Added
+
+- **`sekha init` now auto-registers the MCP server** with Claude Code by
+  running `claude mcp add sekha --scope user -- python -m sekha.cli serve`
+  as a subprocess. Install is now effectively two steps:
+  `pip install sekha && sekha init`. The previous third step (manually
+  running the `claude mcp add` command) is handled automatically when the
+  `claude` CLI is available on PATH.
+- **`sekha init --skip-mcp` flag** for environments without the `claude`
+  CLI or when registration should be done by hand. Prints the manual
+  command to stdout and exits cleanly.
+- **Graceful fallback**: when `claude` is not on PATH, or when
+  `claude mcp add` exits non-zero for reasons other than
+  "already exists", `sekha init` logs a `[WARN]` line to stderr and
+  falls back to printing the manual command. The init process still
+  exits 0 -- MCP registration is best-effort and doesn't block the
+  rest of the setup.
+
+### Changed
+
+- `sekha_command` parameter on `merge_claude_settings()` still defaults to
+  `"sekha hook run"`; nothing changed there. Only the MCP registration
+  step is new.
+
 ## [0.1.1] - 2026-04-14
 
 ### Fixed
@@ -77,5 +103,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Zero runtime dependencies enforced in `pyproject.toml`.
 - TDD throughout -- tests written before implementation for every behavior.
 
+[0.1.2]: https://github.com/Thoth-soft/sekha/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Thoth-soft/sekha/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Thoth-soft/sekha/releases/tag/v0.1.0

@@ -56,12 +56,22 @@ returns deny and the file survives.*
 ```bash
 pip install sekha
 sekha init
-claude mcp add sekha -- sekha serve
 ```
 
-`sekha init` wires the PreToolUse hook into `~/.claude/settings.json` and
-creates `~/.sekha/` for memories and rules. `sekha doctor` will verify the
-wiring whenever you want a sanity check.
+That's it. `sekha init`:
+- Creates `~/.sekha/` for memories and rules.
+- Wires the PreToolUse hook into `~/.claude/settings.json`.
+- Auto-registers the MCP server via `claude mcp add sekha --scope user`
+  so Claude can use `sekha_save` / `sekha_search` / `sekha_add_rule`
+  etc. directly.
+
+Restart Claude Code after init so it picks up the new hook and MCP
+server. Then verify with `sekha doctor`.
+
+**If `claude` is not on PATH** (e.g. Claude Code installed but CLI
+alias missing), `sekha init` prints the manual `claude mcp add` command
+so you can register it by hand. Or use `sekha init --skip-mcp` to opt
+out of the auto-registration entirely.
 
 ## Features
 
