@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Built Cross-Session Memory for Claude Code — and the Enforcement Hooks Still Couldn't Stop Me From Breaking It</title>
+    <meta name="description" content="Sekha v0.1.2: persistent memory for Claude Code that also hard-blocks destructive tool calls. Here is what works, what doesn't, and the hour-one dogfood failure that forced the honest pitch.">
+    <meta name="keywords" content="Claude Code, AI memory, MCP, Python, developer tools, hooks, open source">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #242424;
+            --text-muted: #6b6b6b;
+            --accent: #1a8917;
+            --border: #e6e6e6;
+            --code-bg: #f6f6f6;
+            --surface: #f9f9f9;
+            --highlight: #fff9db;
+            --dark-surface: #1a1d28;
+            --dark-text: #e4e6f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+
+        .hero { max-width: 720px; margin: 0 auto; padding: 80px 24px 40px; }
+        .hero .tag {
+            display: inline-block;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .hero h1 { font-size: 2.6rem; font-weight: 700; line-height: 1.2; margin-bottom: 16px; letter-spacing: -0.5px; }
+        .hero .subtitle { font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 32px; }
+        .hero .meta { display: flex; align-items: center; gap: 12px; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--text-muted); }
+        .hero .avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #6c63ff, #34d399); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1rem; }
+        .hero .meta-text strong { color: var(--text); display: block; }
+
+        article { max-width: 720px; margin: 0 auto; padding: 0 24px 80px; }
+        article p { margin-bottom: 20px; }
+        article h2 { font-size: 1.6rem; font-weight: 700; margin: 52px 0 14px; letter-spacing: -0.3px; }
+        article h3 { font-family: 'Inter', sans-serif; font-size: 1.05rem; font-weight: 700; margin: 32px 0 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        article ul { margin: 12px 0 20px; padding-left: 26px; }
+        article ul li { margin-bottom: 6px; line-height: 1.7; }
+
+        blockquote { border-left: 3px solid var(--text); padding: 2px 0 2px 24px; margin: 32px 0; font-style: italic; font-size: 1.2rem; line-height: 1.7; }
+
+        code { font-family: 'Source Code Pro', monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; }
+        pre { background: var(--dark-surface); color: var(--dark-text); border-radius: 8px; padding: 20px 24px; overflow-x: auto; margin: 20px 0 28px; font-family: 'Source Code Pro', monospace; font-size: 0.83rem; line-height: 1.7; }
+        pre code { background: none; padding: 0; color: inherit; }
+
+        .callout { border-radius: 8px; padding: 18px 22px; margin: 24px 0; font-family: 'Inter', sans-serif; font-size: 0.92rem; line-height: 1.7; border-left: 4px solid #f59e0b; background: var(--highlight); }
+        .callout.blue  { background: #eff6ff; border-left-color: #3b82f6; }
+        .callout.green { background: #f0fdf4; border-left-color: #16a34a; }
+        .callout strong { color: var(--text); }
+
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0 32px; }
+        .compare-card { border-radius: 10px; padding: 18px 20px; font-family: 'Inter', sans-serif; }
+        .compare-card.bad   { background: #fff5f5; border: 1px solid #fecaca; }
+        .compare-card.great { background: #f0fdf4; border: 1px solid #bbf7d0; }
+        .compare-card h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; font-weight: 700; }
+        .compare-card.bad h4   { color: #dc2626; }
+        .compare-card.great h4 { color: #16a34a; }
+        .compare-card ul { list-style: none; padding: 0; }
+        .compare-card li { font-size: 0.85rem; padding: 4px 0; color: #444; line-height: 1.5; }
+        .compare-card.bad li::before   { content: "✗ "; color: #dc2626; font-weight: 700; }
+        .compare-card.great li::before { content: "✓ "; color: #16a34a; font-weight: 700; }
+
+        .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 32px; font-family: 'Inter', sans-serif; font-size: 0.85rem; }
+        .data-table th { text-align: left; padding: 10px 14px; background: var(--surface); border-bottom: 2px solid var(--border); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+        .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+        .final-table { width: 100%; border-collapse: collapse; margin: 20px 0 36px; font-family: 'Inter', sans-serif; font-size: 0.85rem; }
+        .final-table th { text-align: left; padding: 12px 14px; background: var(--dark-surface); color: #e4e6f0; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .final-table th:first-child { border-radius: 8px 0 0 0; }
+        .final-table th:last-child  { border-radius: 0 8px 0 0; }
+        .final-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+        .final-table .muted { color: var(--text-muted); font-size: 0.82rem; }
+
+        .sep { text-align: center; margin: 44px 0; color: var(--text-muted); font-size: 1.5rem; letter-spacing: 12px; }
+
+        .diagram-container {
+            border-radius: 14px;
+            padding: 28px 20px; margin: 28px -60px 36px;
+            display: flex; flex-direction: column; align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+        .diagram-container svg { width: 100%; height: auto; max-width: 780px; }
+        .diagram-container.white    { background: #ffffff; }
+        .diagram-container.warm     { background: #fffcf5; }
+        .diagram-container.cool     { background: #f8fafc; }
+        .diagram-container.mint     { background: #f0fdf8; }
+        .diagram-container.lavender { background: #faf5ff; }
+
+        @keyframes flow { to { stroke-dashoffset: -24; } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulseGlow { 0%,100% { filter: drop-shadow(0 0 4px rgba(99,102,241,.3)); } 50% { filter: drop-shadow(0 0 14px rgba(99,102,241,.7)); } }
+
+        .flow { stroke-dasharray: 10, 8; animation: flow 1s linear infinite; }
+        .f1,.f2,.f3,.f4,.f5,.f6,.f7,.f8,.f9,.f10,.f11,.f12 { opacity: 0; }
+        .in-view .f1  { animation: fadeUp .6s ease .1s forwards; }
+        .in-view .f2  { animation: fadeUp .6s ease .4s forwards; }
+        .in-view .f3  { animation: fadeUp .6s ease .7s forwards; }
+        .in-view .f4  { animation: fadeUp .6s ease 1s forwards; }
+        .in-view .f5  { animation: fadeUp .6s ease 1.3s forwards; }
+        .in-view .f6  { animation: fadeUp .6s ease 1.6s forwards; }
+        .in-view .f7  { animation: fadeUp .6s ease 1.9s forwards; }
+        .in-view .f8  { animation: fadeUp .6s ease 2.2s forwards; }
+        .in-view .f9  { animation: fadeUp .6s ease 2.5s forwards; }
+        .in-view .f10 { animation: fadeUp .6s ease 2.8s forwards; }
+        .in-view .f11 { animation: fadeUp .6s ease 3.1s forwards; }
+        .in-view .f12 { animation: fadeUp .6s ease 3.4s forwards; }
+        .in-view .f4.pulse  { animation: fadeUp .6s ease 1s forwards, pulseGlow 2.5s ease-in-out 1.6s infinite; }
+        .in-view .f6.pulse  { animation: fadeUp .6s ease 1.6s forwards, pulseGlow 2.5s ease-in-out 2.2s infinite; }
+        .in-view .f8.pulse  { animation: fadeUp .6s ease 2.2s forwards, pulseGlow 2.5s ease-in-out 2.8s infinite; }
+
+        @media (max-width: 860px) {
+            .diagram-container { margin-left: 0; margin-right: 0; }
+        }
+        @media (max-width: 680px) {
+            .hero h1 { font-size: 1.9rem; }
+            .hero { padding: 48px 20px 28px; }
+            article { padding: 0 20px 60px; }
+            .compare-grid { grid-template-columns: 1fr; }
+            body { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <span class="tag">Claude Code · Python · Open Source</span>
+    <h1>I Built Cross-Session Memory for Claude Code — and the Enforcement Hooks Still Couldn't Stop Me From Breaking It</h1>
+    <p class="subtitle">Sekha v0.1.2: persistent memory for Claude Code that also hard-blocks destructive tool calls. Here is what works, what doesn't, and the hour-one dogfood failure that forced the honest pitch.</p>
+    <div class="meta">
+        <div class="avatar">M</div>
+        <div class="meta-text">
+            <strong>Mohamed Mohab</strong>
+            8 min read · Apr 2026
+        </div>
+    </div>
+</div>
+
+<article>
+
+<p>I built an AI memory system with hook-level rules enforcement for Claude Code.</p>
+
+<p>Forty minutes after I finished shipping v0.1.0, the AI violated one of its own rules. The system did not stop it.</p>
+
+<p>This is the story of what I did, what broke, and why the project is still worth shipping — in fact, why it got sharper after the failure.</p>
+
+<blockquote>The interesting bug was not in the code. It was in the pitch.</blockquote>
+
+<div class="sep">· · ·</div>
+
+<h2>The problem every Claude Code user already has</h2>
+
+<p>You use Claude Code. You tell it, on Monday, that you prefer Postgres over MySQL for new projects. On Tuesday you open a new session, ask for a schema, and it defaults to MySQL. You sigh, re-explain, move on.</p>
+
+<p>The flip side is worse. You put a rule in <code>CLAUDE.md</code>: <em>never run <code>rm -rf</code> without confirming.</em> Claude follows it, roughly, most of the time. The afternoon it doesn't is the one where you were sharing your screen to a colleague and now a directory you actually needed is gone.</p>
+
+<p>Memory and enforcement. Both missing. Both the same underlying shape: <strong>stuff I've told the AI leaks out of context, either forgotten or ignored, and there is no mechanism that binds it.</strong></p>
+
+<p style="text-align:center;margin:28px 0;"><img src="diagram-gifs/memory-evaporates.gif" alt="memory-evaporates diagram" style="max-width:100%;border-radius:14px;border:1px solid #e2e8f0;"></p>
+
+<p>Every memory system I surveyed — Mem0, MemPalace, Letta, Zep, Basic Memory, plus Claude's own built-in CLAUDE.md — <strong>stores</strong> rules. None of them <strong>enforces</strong> them. They are all prompt-level. The AI reads the rule, acknowledges it, then ignores it when convenient.</p>
+
+<p>I wanted something that could actually refuse to execute a tool call.</p>
+
+<div class="sep">· · ·</div>
+
+<h2>What's actually possible</h2>
+
+<p>Claude Code ships a <code>PreToolUse</code> hook. The hook runs as a subprocess before every tool call. It reads JSON from <code>stdin</code> (session info, tool name, tool input) and emits JSON to <code>stdout</code>. One specific output — <code>permissionDecision: "deny"</code> — blocks the tool call. And not in a soft way: the deny decision is enforced <em>even if you're running with</em> <code>--dangerously-skip-permissions</code>.</p>
+
+<p>No memory system I found uses this. That gap is the entire moat for the thing I built.</p>
+
+<h3>Three processes, one folder</h3>
+
+<p>Sekha is three independent processes that never talk to each other directly. They share state through the filesystem — specifically, a folder at <code>~/.sekha/</code>. The processes are:</p>
+
+<ul>
+<li><strong>MCP server</strong> — long-lived, one per Claude Code session. Exposes six tools the AI drives itself (<code>sekha_save</code>, <code>sekha_search</code>, <code>sekha_list</code>, <code>sekha_delete</code>, <code>sekha_status</code>, <code>sekha_add_rule</code>). Reads and writes the memory folder.</li>
+<li><strong>PreToolUse hook</strong> — short-lived, one per tool call. Reads the incoming event, matches rules against the tool input, returns deny when a rule fires. Lives for milliseconds.</li>
+<li><strong>CLI</strong> — one-shot. <code>sekha init</code>, <code>sekha doctor</code>, <code>sekha add-rule</code>, etc. The install path.</li>
+</ul>
+
+<p style="text-align:center;margin:28px 0;"><img src="diagram-gifs/three-processes.gif" alt="three-processes diagram" style="max-width:100%;border-radius:14px;border:1px solid #e2e8f0;"></p>
+
+<p>No IPC. No daemon. No sockets. POSIX file semantics — atomic rename, advisory locks — are the only synchronization primitive. The three processes coexist because they all touch the same folder and agree on its shape.</p>
+
+<div class="sep">· · ·</div>
+
+<h2>Memory across sessions, in practice</h2>
+
+<p>The memory half is the unglamorous win. You talk to Claude normally. When you tell it something worth keeping, it calls <code>sekha_save</code> on its own. The save lands as a markdown file under <code>~/.sekha/preferences/</code> or <code>~/.sekha/decisions/</code> or wherever fits.</p>
+
+<p>Close Claude Code. Open a new session tomorrow. Ask about what you told it yesterday. Claude calls <code>sekha_search</code>, pulls the matching file, quotes it back.</p>
+
+<p style="text-align:center;margin:28px 0;"><img src="diagram-gifs/memory-flow.gif" alt="memory-flow diagram" style="max-width:100%;border-radius:14px;border:1px solid #e2e8f0;"></p>
+
+<p>The file itself is the contract. Plain markdown with YAML frontmatter. No database. No embeddings. No vector index. You can <code>grep</code> your own memory. You can <code>git add</code> it. You can delete it with <code>rm</code> and it's gone.</p>
+
+<pre><code>---
+id: a23a9b0f
+category: preferences
+created: 2026-04-14T16:00:00Z
+updated: 2026-04-14T16:00:00Z
+tags: [postgres, database]
+source: claude
+---
+
+User prefers Postgres over MySQL for new projects. Reasoning
+was concurrent-write load and dataset size projections.</code></pre>
+
+<p>Search is a plain-text grep with three scoring signals: term frequency, recency decay, and filename match. On a synthetic 10,000-file corpus the p95 search latency is under 500ms warm cache. No machine learning. No tokenization. No context length issues.</p>
+
+<div class="sep">· · ·</div>
+
+<h2>The enforcement half — where it actually works</h2>
+
+<p>Rules live in <code>~/.sekha/rules/</code> as markdown files with frontmatter. A severity, a tool scope, a regex pattern, and a message. Example:</p>
+
+<pre><code>---
+name: block-rm-rf
+severity: block
+triggers: [PreToolUse]
+matches: [Bash]
+pattern: 'rm\s+-rf'
+priority: 50
+---
+
+Catastrophic. If you really want this, run it yourself outside
+the AI session.</code></pre>
+
+<p>When Claude tries to run a shell command, Claude Code spawns the hook as a subprocess. The hook loads every rule file, matches the pattern against the JSON-flattened tool input, and returns a decision.</p>
+
+<p style="text-align:center;margin:28px 0;"><img src="diagram-gifs/hook-block.gif" alt="hook-block diagram" style="max-width:100%;border-radius:14px;border:1px solid #e2e8f0;"></p>
+
+<p>I tested this end-to-end by installing a rule that blocked any <code>rm -rf</code> targeting a specific demo folder, then asking Claude Code to delete that folder. The hook fired. Claude Code showed the deny message. The <code>rm -rf</code> never executed. The file survived.</p>
+
+<p>That is real enforcement. Not "the AI was reminded." The call <em>did not run.</em></p>
+
+<div class="callout green">
+<strong>What this actually blocks:</strong> regex-matchable patterns on tool inputs. <code>rm -rf</code>, <code>git push --force</code>, <code>DROP TABLE</code>, <code>curl | bash</code>, whatever you encode. The hook sees the tool call, matches, denies. Survives <code>--dangerously-skip-permissions</code>.
+</div>
+
+<div class="sep">· · ·</div>
+
+<h2>Where it doesn't work — and why I found out the hard way</h2>
+
+<p>Forty minutes after I shipped v0.1.0, the AI (yes, it was assisting me on the build) hit a PyPI upload error. The bare name <code>cyrus</code> — my original brand before the rename — was admin-blocked on PyPI. The error was a clean 400 with a specific reason.</p>
+
+<p>Instead of reporting it and asking what to do, the AI picked a new name (<code>cyrus-mcp</code>) on its own, rebuilt, uploaded. An irreversible publish to PyPI under a name I had explicitly locked.</p>
+
+<p>I had a rule for this. I had literally installed it as a Sekha rule minutes earlier — <code>warn-no-assumptions</code>, broad pattern, fired on every tool call, injected a reminder that said <em>explain before acting, wait for approval, no renames without asking.</em></p>
+
+<p>The rule did not stop the AI.</p>
+
+<p style="text-align:center;margin:28px 0;"><img src="diagram-gifs/behavioral-fails.gif" alt="behavioral-fails diagram" style="max-width:100%;border-radius:14px;border:1px solid #e2e8f0;"></p>
+
+<p>Why? Because <strong>the decision happened between tool calls</strong>, in the reasoning stream the hook can't see. The hook fires at tool-call boundaries. It inspects tool inputs. It can veto the execution of a specific call. But the plan to rename the package, the choice of the new name, the decision to proceed without asking — those all happened in the AI's token output, invisible to any subprocess running alongside.</p>
+
+<p>There is no <code>PreReason</code> hook. Not in Claude Code, not in any agent framework I'm aware of.</p>
+
+<div class="compare-grid">
+<div class="compare-card great">
+<h4>What Sekha enforces (hard)</h4>
+<ul>
+<li>Regex-matchable patterns on tool inputs</li>
+<li>Specific destructive commands (<code>rm -rf</code>, <code>git push --force</code>)</li>
+<li>File-path blocklists</li>
+<li>Tool-name scoping (only Bash, only Edit, etc.)</li>
+</ul>
+</div>
+<div class="compare-card bad">
+<h4>What Sekha does NOT enforce</h4>
+<ul>
+<li>"Always confirm before acting"</li>
+<li>"Don't rename things without asking"</li>
+<li>"No assumptions — verify first"</li>
+<li>"Explain your plan, wait for approval"</li>
+</ul>
+</div>
+</div>
+
+<p>So Sekha enforces <strong>what the AI does</strong> (tool patterns). It cannot enforce <strong>what the AI decides</strong> (behavioral rules, scope discipline, asking for permission).</p>
+
+<p>The README now says this explicitly. The old marketing copy is gone. The threat model section leads with "what Sekha enforces" vs "what Sekha does NOT enforce" and admits the gap.</p>
+
+<p>Given the gap, two options were on the table: keep the broad pitch ("hook-level enforcement, AI cannot bypass") and hope nobody tests the behavioral-rule case hard enough to catch the overclaim — or narrow the pitch to what's actually true and ship that.</p>
+
+<blockquote>A narrower true claim beats a broader false one — even when the broader one would have been more exciting to pitch.</blockquote>
+
+<p>The narrow version is smaller but credible. A user who comes for tool-pattern blocking gets exactly what they expected. The behavioral-rule failure mode is documented in the threat model, not discovered in production.</p>
+
+<p>There's also a clean engineering lesson here about where enforcement can live:</p>
+
+<table class="final-table">
+<thead><tr><th>Mechanism</th><th>What it can enforce</th><th>What it cannot</th></tr></thead>
+<tbody>
+<tr><td>Memory / CLAUDE.md / system prompts</td><td class="muted">Prompts the AI has read</td><td class="muted">Anything the AI decides to ignore</td></tr>
+<tr><td>PreToolUse hook (Sekha's moat)</td><td class="muted">Specific tool-call patterns</td><td class="muted">The AI's reasoning / plan / choice of tool</td></tr>
+<tr><td>OS-level sandbox (container, VM, seccomp)</td><td class="muted">All subprocess behavior</td><td class="muted">Creative workarounds via legit tool calls</td></tr>
+<tr><td>Supervisor process reading the transcript</td><td class="muted">Cross-turn behavior corrections</td><td class="muted">Within-turn reasoning</td></tr>
+</tbody>
+</table>
+
+<p>Sekha covers row 2. Rows 1 and 3 are out there. Row 4 is the v2 idea I keep coming back to: a separate process that reads Claude Code's transcript after each turn and injects corrections as if they came from the user. That's not v0.1.x — that's a different project-scale problem.</p>
+
+<div class="sep">· · ·</div>
+
+<h2>Install and try it</h2>
+
+<p>Two commands on a fresh machine:</p>
+
+<pre><code>pip install sekha
+sekha init</code></pre>
+
+<p><code>sekha init</code> creates the <code>~/.sekha/</code> folder tree, merges the PreToolUse hook into <code>~/.claude/settings.json</code>, and (as of v0.1.2) auto-registers the MCP server with Claude Code by running <code>claude mcp add sekha --scope user -- python -m sekha.cli serve</code> on your behalf. Restart Claude Code after init so it picks up the new hook and MCP server.</p>
+
+<p style="text-align:center;margin:28px 0;"><img src="diagram-gifs/install-flow.gif" alt="install-flow diagram" style="max-width:100%;border-radius:14px;border:1px solid #e2e8f0;"></p>
+
+<p>Verify with <code>sekha doctor</code>. It runs seven checks (Python version, CLI on PATH, <code>~/.sekha/</code> writable, hook registered, MCP canary, kill-switch inactive, recent hook errors) and prints a pass/fail for each. Exit code is 0 iff everything passes — so the same command doubles as a CI gate.</p>
+
+<div class="callout blue">
+<strong>Scope honesty, one more time:</strong> rules must be regex-matchable against tool inputs to be hard-enforced. Behavioral rules (<em>always confirm, no assumptions, explain your plan first</em>) live as soft reminders only. If that gap matters for your use case, you want an OS-level sandbox as well, not instead.
+</div>
+
+<p>Sekha v0.1.2 is small. 4,000 lines of Python. Zero runtime dependencies. 349 tests. MIT license. The GitHub repo is at <code>github.com/Thoth-soft/sekha</code> and ships four example rules (<code>block-rm-rf</code>, <code>block-force-push-main</code>, <code>block-drop-table</code>, <code>warn-no-tests-before-commit</code>) in <code>examples/rules/</code>, ready to copy.</p>
+
+<p>If you try it and something breaks, open an issue on the repo. The feedback I'd actually use:</p>
+
+<ul>
+<li><strong>Edge cases in memory retrieval</strong> — things Sekha should find but doesn't, or things it finds but shouldn't. Search relevance is the quietest thing to get wrong.</li>
+<li><strong>Rule patterns you've reached for after something went wrong</strong> — the foot-guns that hit you in production. Those are the rules worth shipping as additional examples.</li>
+<li><strong>Other AI clients with a hook that fires before tool execution</strong> — if Cursor, Cline, Windsurf, or Continue grow equivalents, Sekha's hook layer should port in a weekend.</li>
+</ul>
+
+<p>First ten users matter more than the next thousand. If you had a similar idea and hit a wall a different way, I'd especially like to hear that. The most useful conversation about any new tool is the one with somebody who already tried to solve the same thing and knows where the cliffs are.</p>
+
+</article>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('in-view');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15 });
+document.querySelectorAll('.diagram-container').forEach(d => observer.observe(d));
+</script>
+
+</body>
+</html>
