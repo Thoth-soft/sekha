@@ -1,29 +1,30 @@
 # Anthropic Discord post
 
 Channel: `#project-showcase` or `#community-projects` (whatever the current name
-is). Keep it short - Discord channels move fast.
+is). Keep it short - Discord moves fast.
 
 ## Message (single post, no thread)
 
 ```
-Shipped Sekha v0.1.0 today: https://github.com/Thoth-soft/sekha
+Shipped Sekha v0.1.0: https://github.com/Thoth-soft/sekha
 
-It's the only AI memory system I found that actually blocks Claude Code tool
-calls via PreToolUse hooks instead of just prompting "please don't."
+Persistent memory for Claude Code. Plain markdown files under ~/.sekha/,
+six MCP tools Claude can use to save/search/delete memories. Tell it a
+preference in one session, ask about it in the next, it remembers.
 
-- Rules are plain markdown in ~/.sekha/rules/
-- Hook returns permissionDecision: "deny" when tool input matches your regex
-- Works even with --dangerously-skip-permissions (that was the whole point)
-- Zero Python deps, one-command install
+Bonus: it's the only memory system I found that can actually HARD-BLOCK
+dangerous tool calls. Uses the PreToolUse hook with permissionDecision:
+deny, which survives --dangerously-skip-permissions. Write a rule for
+rm -rf and Claude literally can't run it.
 
-Scope honesty: blocks regex-matchable tool patterns (rm -rf, git push --force,
-DROP TABLE). Does NOT enforce behavioral rules like "always confirm" - those
-stay prompt-level and the AI can ignore them (I proved this embarrassingly
-while building it). Threat model in the README is explicit.
+Zero Python deps, Python 3.11+, cross-platform. pip install sekha.
 
-pip install sekha && sekha init && claude mcp add sekha -- sekha serve
+Scope honesty: hard-blocks only work for regex-matchable tool patterns.
+Behavioral rules ("always confirm") stay prompt-level. Threat model in
+README is explicit.
 
-MIT, feedback welcome - especially edge cases I haven't hit yet.
+Feedback welcome - especially edge cases in memory retrieval and rule
+ideas for common foot-guns.
 ```
 
 ## If a mod bumps you to #off-topic or similar
@@ -33,6 +34,6 @@ Fine. Repost verbatim and move on.
 ## Follow-up plan
 
 - Check replies twice a day for the first week
-- Offer to help any user who hits install issues - first-week supporters matter
+- Offer to help any user who hits install issues — first-week supporters matter
 - Don't repost in the same channel; instead drop into specific threads where
-  someone complains about Claude not following rules
+  someone complains about Claude forgetting things or ignoring rules

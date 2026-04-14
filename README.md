@@ -1,27 +1,41 @@
 # Sekha
 
-Zero-dependency AI memory system with hook-level rules enforcement for Claude Code.
+**Persistent memory for Claude Code. Zero dependencies. Plain markdown.
+Plus: the only AI memory system that can hard-block destructive tool calls.**
 
-## Why Sekha?
+## What Sekha does
 
-Every AI memory system stores rules. None of them enforce them.
+**1. Remembers things across sessions.** Tell Claude in one session,
+ask about it in the next, and it knows. Preferences, decisions, project
+context, anything — saved as plain markdown files under `~/.sekha/`.
+Close Claude Code. Open it again tomorrow. The memory is still there.
 
-Sekha hooks into Claude Code's PreToolUse event to **actually block** tool calls
-whose inputs match a regex pattern you define -- the AI cannot bypass these,
-even with `--dangerously-skip-permissions`. Rules live as plain markdown files
-in `~/.sekha/rules/`, so your enforcement policy is as reviewable as any other
+Claude invokes `sekha_save` / `sekha_search` / `sekha_list` / `sekha_delete`
+via MCP to manage the memory itself. You just talk to Claude normally.
+
+**2. Blocks dangerous tool calls (the moat).** Sekha hooks into Claude
+Code's `PreToolUse` event and returns `permissionDecision: "deny"` when a
+tool-input matches a regex rule you've written. The AI **cannot bypass this**,
+even with `--dangerously-skip-permissions`. `rm -rf`, `git push --force`,
+`DROP TABLE` — whatever you choose to guard. Rules are plain markdown in
+`~/.sekha/rules/`, so your enforcement policy is as reviewable as any other
 config under version control.
 
-**What Sekha enforces (hard):** regex-matchable tool patterns --
-`rm -rf`, `git push --force`, `DROP TABLE`, etc. The PreToolUse hook
-vetoes the tool call before it runs.
+Every other memory system (MemPalace, Mem0, Letta, Zep, Basic Memory,
+CLAUDE.md) only stores rules. Sekha enforces them at the hook boundary.
+
+## Honest scope
+
+**What Sekha enforces (hard):** regex-matchable tool-input patterns --
+`rm -rf /`, `git push --force origin main`, `DROP TABLE users`. The
+PreToolUse hook vetoes the tool call before it runs.
 
 **What Sekha does NOT enforce:** behavioral rules like "always confirm before
 acting" or "no assumptions." Those remain prompt-level reminders and the AI
 can override them. See the [Threat Model](#threat-model) for why this is a
-fundamental limit of today's Claude Code hook surface, not a bug.
+fundamental limit of today's Claude Code hook surface, not a bug in Sekha.
 
-[30-second demo: write rule -> claude tries to run rm -rf -> blocked with message]
+[30-second demo: memory across sessions + blocking rm -rf]
 
 ## Install
 
@@ -37,17 +51,21 @@ wiring whenever you want a sanity check.
 
 ## Features
 
-- **Persistent memory** across sessions (conversations, decisions, preferences)
-  stored as plain markdown files under `~/.sekha/`.
+- **Persistent memory across sessions.** Plain markdown files under
+  `~/.sekha/` grouped into five fixed categories: `sessions`, `decisions`,
+  `preferences`, `projects`, `rules`. Grep-friendly filenames, git-trackable
+  if you want them in version control. Search with term-frequency x recency
+  x filename-match scoring.
+- **6 MCP tools** for the AI to manage memory itself: `sekha_save`,
+  `sekha_search`, `sekha_list`, `sekha_delete`, `sekha_status`,
+  `sekha_add_rule`.
 - **Tool-pattern rule enforcement** at the hook level. For regex matches
   against tool inputs, the AI cannot bypass -- even with
   `--dangerously-skip-permissions`. Behavioral rules ("always confirm",
   "no assumptions") remain prompt-level and are overridable; see Threat Model.
-- **Zero dependencies** -- pure Python stdlib, no supply chain surface.
+- **Zero runtime dependencies** -- pure Python stdlib, no supply chain surface.
 - **Works with any MCP client** for memory (Claude Code, Cursor, Cline,
   Windsurf). Hook-level rule enforcement is Claude Code exclusive in v0.1.0.
-- **6 MCP tools**: `sekha_save`, `sekha_search`, `sekha_list`, `sekha_delete`,
-  `sekha_status`, `sekha_add_rule`.
 - **CLI**: `sekha init`, `sekha doctor`, `sekha add-rule`, `sekha list-rules`,
   `sekha hook run/bench/enable/disable`, `sekha serve`.
 

@@ -1,43 +1,59 @@
 # Twitter / X launch thread
 
-Post from your account, 4 tweets in a thread. Post tweet 1 standalone; reply
-the others to form a thread.
+Post from your account. 5 tweets. Tweet 1 standalone; tweets 2-5 reply to
+form a thread.
 
-## Tweet 1 (hook + GIF)
+## Tweet 1 (hook + memory GIF)
 
 ```
-Claude Code ignored my rules one too many times.
+You tell Claude Code something in one session.
+Open a new session tomorrow.
+Claude forgot.
 
-So I hooked into PreToolUse and made it block for real.
+Sekha fixes that. Plus it can actually block rm -rf.
 
-[attach docs/demo.gif]
+[attach docs/demo-memory.gif — cross-session memory demo]
 
-sekha: zero-dep AI memory system that actually blocks destructive tool calls
 https://github.com/Thoth-soft/sekha
 ```
 
-## Tweet 2 (mechanism, reply to #1)
+## Tweet 2 (memory mechanism, reply to #1)
 
 ```
-The trick: Claude Code's PreToolUse hook can return
-`permissionDecision: "deny"` and the tool call is enforced even with
---dangerously-skip-permissions.
+Sekha stores memories as plain markdown under ~/.sekha/. Claude calls
+sekha_save via MCP when you tell it something worth keeping — preferences,
+decisions, project context — and sekha_search to find it later.
 
-No other memory system I found uses this. Sekha does. Rules live as plain
-markdown in ~/.sekha/rules/.
+Zero Python deps. No database. Just files + grep.
 ```
 
-## Tweet 3 (honest scope, reply to #2)
+## Tweet 3 (blocking differentiator, reply to #2)
 
 ```
-What it doesn't do: enforce behavioral rules like "always confirm" or "no
-guessing." Those stay prompt-level and the AI can ignore them.
+The other thing Sekha does that no one else does: hard-blocks destructive
+tool calls.
 
-No PreReason hook exists. Sekha is a consistency enforcer, not a security
-sandbox. README threat model is honest about this.
+Claude Code's PreToolUse hook can return permissionDecision: deny. That
+survives --dangerously-skip-permissions.
+
+Write a rule for rm -rf, git push --force, DROP TABLE. Claude literally
+can't run it.
+
+[attach docs/demo-block.gif — rm -rf blocked]
 ```
 
-## Tweet 4 (install + ask, reply to #3)
+## Tweet 4 (honest scope, reply to #3)
+
+```
+What Sekha doesn't do: enforce behavioral rules like "always confirm
+before acting." Those stay prompt-level and the AI can ignore them.
+
+No PreReason hook exists. Sekha is a consistency enforcer for specific
+tool patterns, not a security sandbox. README threat model is honest
+about this.
+```
+
+## Tweet 5 (install + ask, reply to #4)
 
 ```
 pip install sekha
@@ -46,8 +62,8 @@ claude mcp add sekha -- sekha serve
 
 Python 3.11+, cross-platform, MIT, 337 tests.
 
-If you've tried other ways to keep Claude honest, would love to hear what
-worked and what didn't - especially edge cases I haven't hit yet.
+Trying persistent memory a different way? Would love to hear what
+worked and what didn't.
 ```
 
 ## Hashtags (add to tweet 1 only, 2-3 max)
