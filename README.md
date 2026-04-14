@@ -35,10 +35,21 @@ acting" or "no assumptions." Those remain prompt-level reminders and the AI
 can override them. See the [Threat Model](#threat-model) for why this is a
 fundamental limit of today's Claude Code hook surface, not a bug in Sekha.
 
+### Memory across sessions
+
 ![Memory across sessions demo](docs/demo-memory.gif)
 
-*Above: Sekha remembers what you told Claude in a previous session.
-Rm-rf blocking demo coming soon.*
+*Claude remembers what you told it in a previous session — saved as a
+markdown file under `~/.sekha/`, retrieved via the `sekha_search` MCP
+tool on demand.*
+
+### Blocking a destructive tool call
+
+![Hook blocks rm -rf](docs/demo-block.gif)
+
+*Claude asks Sekha to install a rule blocking `rm -rf` on a specific
+folder, then attempts to delete that folder — the PreToolUse hook
+returns deny and the file survives.*
 
 ## Install
 
