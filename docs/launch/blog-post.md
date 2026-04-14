@@ -45,7 +45,7 @@ No memory system I found uses this. That gap was the entire moat for the thing I
 
 ### What I built
 
-[Sekha](https://github.com/Thoth-soft/sekha) is ~2,000 lines of Python stdlib. Zero runtime dependencies. Cross-platform. MIT.
+[Sekha](https://github.com/Thoth-soft/sekha) is ~4,000 lines of Python stdlib. Zero runtime dependencies. Cross-platform. MIT.
 
 - Rules are plain markdown in `~/.sekha/rules/` — frontmatter for severity + tool scope + regex pattern, body for the block message
 - The hook reads those rules on every tool call, matches against the tool input, returns deny when a rule fires
